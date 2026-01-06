@@ -1,4 +1,4 @@
-const { MessageAnalytics, ApiAnalytics, SessionAnalytics, ActivityLog, User, Session, Subscription, Transaction, Invoice, Plan, sequelize } = require('../models');
+const { MessageAnalytics, ApiAnalytics, SessionAnalytics, ActivityLog, User, Session, Subscription, Transaction, Invoice, Plan, Message, sequelize } = require('../models');
 const { Op, fn, col, literal } = require('sequelize');
 
 class AnalyticsService {
@@ -274,11 +274,36 @@ class AnalyticsService {
    * Get recent activity
    */
   async getRecentActivity(userId, limit = 50) {
-    return await ActivityLog.findAll({
+    // Try to get from activity logs first
+    const activityLogs = await ActivityLog.findAll({
       where: { userId },
       order: [['createdAt', 'DESC']],
       limit
     });
+
+    if (activityLogs && activityLogs.length > 0) {
+      return activityLogs.map(log => ({
+        event: log.eventType.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        timestamp: log.createdAt,
+        status: 'success',
+        details: log.eventData
+      }));
+    }
+
+    // Fallback: Get recent messages as activity
+    const recentMessages = await Message.findAll({
+      where: { user_id: userId },
+      order: [['created_at', 'DESC']],
+      limit: limit,
+      attributes: ['id', 'message_type', 'status', 'created_at', 'to_number']
+    });
+
+    return recentMessages.map(msg => ({
+      event: `Message ${msg.message_type} sent to ${msg.to_number}`,
+      timestamp: msg.created_at,
+      status: msg.status === 'sent' || msg.status === 'delivered' ? 'success' : 'failed',
+      details: { messageId: msg.id, type: msg.message_type }
+    }));
   }
 
   /**
