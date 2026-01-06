@@ -6,7 +6,8 @@ import { analyticsAPI } from '@/lib/api';
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 export default function AnalyticsPage() {
-  const [stats, setStats] = useState<any>(null);
+  const [messageStats, setMessageStats] = useState<any>(null);
+  const [apiStats, setApiStats] = useState<any>(null);
   const [dateRange, setDateRange] = useState('7d');
   const [loading, setLoading] = useState(true);
 
@@ -17,40 +18,56 @@ export default function AnalyticsPage() {
   const fetchAnalytics = async () => {
     setLoading(true);
     try {
-      const [messageStats, apiStats] = await Promise.all([
-        analyticsAPI.getMessageStats({ range: dateRange }),
-        analyticsAPI.getApiStats({ range: dateRange }),
+      // Calculate date range
+      const endDate = new Date().toISOString().split('T')[0];
+      const startDate = new Date();
+      
+      switch(dateRange) {
+        case '24h':
+          startDate.setDate(startDate.getDate() - 1);
+          break;
+        case '7d':
+          startDate.setDate(startDate.getDate() - 7);
+          break;
+        case '30d':
+          startDate.setDate(startDate.getDate() - 30);
+          break;
+        case '90d':
+          startDate.setDate(startDate.getDate() - 90);
+          break;
+      }
+
+      const [messagesResp, apiResp] = await Promise.all([
+        analyticsAPI.getMessageStats({ 
+          startDate: startDate.toISOString().split('T')[0], 
+          endDate 
+        }),
+        analyticsAPI.getApiStats({ 
+          startDate: startDate.toISOString().split('T')[0], 
+          endDate 
+        }),
       ]);
       
-      setStats({
-        messages: messageStats.data.data,
-        api: apiStats.data.data,
-      });
+      setMessageStats(messagesResp.data.data);
+      setApiStats(apiResp.data.data);
     } catch (error) {
-      console.error('Failed to fetch analytics');
+      console.error('Failed to fetch analytics:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const messageChartData = [
-    { date: 'Mon', sent: 120, delivered: 115, read: 98, failed: 5 },
-    { date: 'Tue', sent: 150, delivered: 145, read: 130, failed: 5 },
-    { date: 'Wed', sent: 180, delivered: 175, read: 160, failed: 5 },
-    { date: 'Thu', sent: 200, delivered: 195, read: 180, failed: 5 },
-    { date: 'Fri', sent: 170, delivered: 165, read: 150, failed: 5 },
-    { date: 'Sat', sent: 140, delivered: 135, read: 120, failed: 5 },
-    { date: 'Sun', sent: 100, delivered: 95, read: 85, failed: 5 },
-  ];
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600"></div>
+      </div>
+    );
+  }
 
-  const apiChartData = [
-    { hour: '00:00', requests: 45, success: 43, failed: 2 },
-    { hour: '04:00', requests: 30, success: 29, failed: 1 },
-    { hour: '08:00', requests: 120, success: 118, failed: 2 },
-    { hour: '12:00', requests: 200, success: 195, failed: 5 },
-    { hour: '16:00', requests: 180, success: 177, failed: 3 },
-    { hour: '20:00', requests: 150, success: 148, failed: 2 },
-  ];
+  // Prepare chart data from API response
+  const messageChartData = messageStats?.daily || [];
+  const apiChartData = apiStats?.hourly || [];
 
   return (
     <div>
@@ -85,8 +102,12 @@ export default function AnalyticsPage() {
             <span className="text-sm font-medium text-gray-600">Total Messages</span>
             <TrendingUp className="h-5 w-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">12,450</p>
-          <p className="text-sm text-green-600 mt-1">+12.5% from last period</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {messageStats?.totals?.sent?.toLocaleString() || 0}
+          </p>
+          <p className="text-sm text-gray-600 mt-1">
+            {messageStats?.totals?.delivered || 0} delivered
+          </p>
         </div>
         
         <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -94,8 +115,12 @@ export default function AnalyticsPage() {
             <span className="text-sm font-medium text-gray-600">Delivery Rate</span>
             <TrendingUp className="h-5 w-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">97.8%</p>
-          <p className="text-sm text-green-600 mt-1">+0.3% from last period</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {messageStats?.deliveryRate || 0}%
+          </p>
+          <p className="text-sm text-green-600 mt-1">
+            {messageStats?.totals?.failed || 0} failed
+          </p>
         </div>
         
         <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -103,8 +128,12 @@ export default function AnalyticsPage() {
             <span className="text-sm font-medium text-gray-600">Read Rate</span>
             <TrendingUp className="h-5 w-5 text-green-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">85.2%</p>
-          <p className="text-sm text-green-600 mt-1">+2.1% from last period</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {messageStats?.readRate || 0}%
+          </p>
+          <p className="text-sm text-gray-600 mt-1">
+            {messageStats?.totals?.read || 0} read
+          </p>
         </div>
         
         <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -112,8 +141,12 @@ export default function AnalyticsPage() {
             <span className="text-sm font-medium text-gray-600">API Calls</span>
             <BarChart3 className="h-5 w-5 text-primary-600" />
           </div>
-          <p className="text-3xl font-bold text-gray-900">24,890</p>
-          <p className="text-sm text-gray-600 mt-1">98.7% success rate</p>
+          <p className="text-3xl font-bold text-gray-900">
+            {apiStats?.totals?.requests?.toLocaleString() || 0}
+          </p>
+          <p className="text-sm text-gray-600 mt-1">
+            {apiStats?.successRate || 0}% success rate
+          </p>
         </div>
       </div>
 
@@ -122,35 +155,47 @@ export default function AnalyticsPage() {
         {/* Message Statistics */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Message Statistics</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={messageChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="date" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Line type="monotone" dataKey="sent" stroke="#0ea5e9" strokeWidth={2} />
-              <Line type="monotone" dataKey="delivered" stroke="#10b981" strokeWidth={2} />
-              <Line type="monotone" dataKey="read" stroke="#8b5cf6" strokeWidth={2} />
-              <Line type="monotone" dataKey="failed" stroke="#ef4444" strokeWidth={2} />
-            </LineChart>
-          </ResponsiveContainer>
+          {messageChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={messageChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="date" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type="monotone" dataKey="sent" stroke="#0ea5e9" strokeWidth={2} name="Sent" />
+                <Line type="monotone" dataKey="delivered" stroke="#10b981" strokeWidth={2} name="Delivered" />
+                <Line type="monotone" dataKey="read" stroke="#8b5cf6" strokeWidth={2} name="Read" />
+                <Line type="monotone" dataKey="failed" stroke="#ef4444" strokeWidth={2} name="Failed" />
+              </LineChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-gray-500">
+              No message data available for this period
+            </div>
+          )}
         </div>
 
         {/* API Usage */}
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">API Usage</h3>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={apiChartData}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="hour" />
-              <YAxis />
-              <Tooltip />
-              <Legend />
-              <Bar dataKey="success" fill="#10b981" />
-              <Bar dataKey="failed" fill="#ef4444" />
-            </BarChart>
-          </ResponsiveContainer>
+          {apiChartData.length > 0 ? (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={apiChartData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="hour" />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Bar dataKey="success" fill="#10b981" name="Success" />
+                <Bar dataKey="failed" fill="#ef4444" name="Failed" />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="flex items-center justify-center h-[300px] text-gray-500">
+              No API usage data available for this period
+            </div>
+          )}
         </div>
       </div>
 
@@ -170,10 +215,10 @@ export default function AnalyticsPage() {
                   Value
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Change
+                  Rate
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Trend
+                  Status
                 </th>
               </tr>
             </thead>
@@ -182,11 +227,31 @@ export default function AnalyticsPage() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   Messages Sent
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">12,450</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">+12.5%</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {messageStats?.totals?.sent?.toLocaleString() || 0}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  {messageStats?.deliveryRate || 0}% delivery rate
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-700">
+                    Active
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  API Requests
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {apiStats?.totals?.requests?.toLocaleString() || 0}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  {apiStats?.successRate || 0}% success rate
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
-                    ↑ Increasing
+                    Healthy
                   </span>
                 </td>
               </tr>
@@ -194,23 +259,15 @@ export default function AnalyticsPage() {
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                   Average Response Time
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">245ms</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">-15ms</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  {apiStats?.performance?.avgResponseTime || 0}ms
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                  API performance
+                </td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
-                    ↓ Improving
-                  </span>
-                </td>
-              </tr>
-              <tr>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  Active Sessions
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">8</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600">+2</td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
-                    ↑ Growing
+                    Optimal
                   </span>
                 </td>
               </tr>
