@@ -42,28 +42,28 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatsCard
           title="Total Messages"
-          value={stats?.totalMessages || 0}
+          value={stats?.overview?.messagesSentToday || 0}
           icon={MessageSquare}
           trend={+12.5}
           color="blue"
         />
         <StatsCard
           title="Active Sessions"
-          value={stats?.activeSessions || 0}
+          value={stats?.overview?.activeSessions || 0}
           icon={Activity}
           trend={+5.2}
           color="green"
         />
         <StatsCard
           title="Success Rate"
-          value={`${stats?.successRate || 0}%`}
+          value={`${stats?.overview?.deliveryRate || 0}%`}
           icon={TrendingUp}
           trend={+2.1}
           color="purple"
         />
         <StatsCard
           title="API Calls Today"
-          value={stats?.apiCallsToday || 0}
+          value={stats?.overview?.apiRequestsToday || 0}
           icon={BarChart3}
           trend={-3.4}
           color="orange"
