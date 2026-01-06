@@ -53,30 +53,51 @@ app.get('/health', (req, res) => {
   });
 });
 
+console.log('🔍 [DEBUG] Loading route files...');
+
 // Import routes
 const authRoutes = require('./routes/auth');
+console.log('✅ [DEBUG] Auth routes loaded');
 const sessionRoutes = require('./routes/sessions');
+console.log('✅ [DEBUG] Session routes loaded');
 const messageRoutes = require('./routes/messages');
+console.log('✅ [DEBUG] Message routes loaded');
 const templateRoutes = require('./routes/templates');
+console.log('✅ [DEBUG] Template routes loaded');
 const broadcastRoutes = require('./routes/broadcast');
+console.log('✅ [DEBUG] Broadcast routes loaded');
 const chatRoutes = require('./routes/chat');
+console.log('✅ [DEBUG] Chat routes loaded');
 const groupRoutes = require('./routes/groupRoutes');
+console.log('✅ [DEBUG] Group routes loaded');
 const contactRoutes = require('./routes/contactRoutes');
+console.log('✅ [DEBUG] Contact routes loaded');
 const webhookRoutes = require('./routes/webhookRoutes');
+console.log('✅ [DEBUG] Webhook routes loaded');
 const scheduleRoutes = require('./routes/scheduleRoutes');
+console.log('✅ [DEBUG] Schedule routes loaded');
 const adminRoutes = require('./routes/adminRoutes');
+console.log('✅ [DEBUG] Admin routes loaded');
 const billingRoutes = require('./routes/billingRoutes');
+console.log('✅ [DEBUG] Billing routes loaded');
 const analyticsRoutes = require('./routes/analyticsRoutes');
+console.log('✅ [DEBUG] Analytics routes loaded');
 const apiKeyRoutes = require('./routes/apiKeyRoutes');
+console.log('✅ [DEBUG] API Key routes loaded');
+console.log('🎉 [DEBUG] All routes loaded successfully!');
 
 // Import analytics middleware
+console.log('🔍 [DEBUG] Loading analytics middleware...');
 const { trackApiRequest } = require('./middleware/analytics');
+console.log('✅ [DEBUG] Analytics middleware loaded');
 
 // API Routes
 const apiVersion = process.env.API_VERSION || 'v1';
+console.log('🔍 [DEBUG] Setting up analytics tracking...');
 
 // Track API requests for analytics
 app.use(trackApiRequest);
+console.log('✅ [DEBUG] Analytics tracking registered');
 
 app.get(`/api/${apiVersion}`, (req, res) => {
   res.json({
@@ -134,9 +155,13 @@ const PORT = process.env.PORT || 3000;
 // Initialize server with database connection
 const startServer = async () => {
   try {
+    console.log('🔍 [DEBUG] Starting server initialization...');
     // Test database connection
+    console.log('🔍 [DEBUG] Testing database connection...');
     await testConnection();
+    console.log('✅ [DEBUG] Database connection successful!');
     
+    console.log('🔍 [DEBUG] Starting Express server...');
     app.listen(PORT, () => {
       logger.info(`🚀 Server running on port ${PORT}`);
       logger.info(`📝 Environment: ${process.env.NODE_ENV || 'development'}`);
@@ -151,8 +176,8 @@ const startServer = async () => {
   }
 };
 
+console.log('🔍 [DEBUG] Calling startServer()...');
 startServer();
-
-module.exports = app;
+console.log('✅ [DEBUG] startServer() called (async)');
 
 module.exports = app;
