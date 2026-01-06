@@ -6,6 +6,17 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
 require('dotenv').config();
 
+// Global error handlers - MUST be before any other code
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+  process.exit(1);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('❌ Uncaught Exception:', error);
+  process.exit(1);
+});
+
 // Import configurations
 const { validateEnv } = require('./config/env');
 const { testConnection } = require('./config/database');
