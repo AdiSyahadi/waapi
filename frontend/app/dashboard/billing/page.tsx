@@ -218,20 +218,22 @@ export default function BillingPage() {
               <ul className="space-y-3 mb-6">
                 <li className="flex items-center text-sm text-gray-700">
                   <CheckCircle className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-                  {plan.limits?.maxSessions || 'Unlimited'} WhatsApp sessions
+                  {plan.limits?.max_sessions || plan.limits?.maxSessions || 'Unlimited'} WhatsApp sessions
                 </li>
                 <li className="flex items-center text-sm text-gray-700">
                   <CheckCircle className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-                  {plan.limits?.maxMessages || 'Unlimited'} messages/month
+                  {plan.limits?.max_messages_per_day || plan.limits?.maxMessages || 'Unlimited'} messages/day
                 </li>
                 <li className="flex items-center text-sm text-gray-700">
                   <CheckCircle className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-                  {plan.limits?.apiCalls || 'Unlimited'} API calls/month
+                  {plan.limits?.max_api_keys || plan.limits?.apiCalls || 'Unlimited'} API keys
                 </li>
-                <li className="flex items-center text-sm text-gray-700">
-                  <CheckCircle className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
-                  {plan.features?.includes('priority_support') ? 'Priority' : 'Email'} support
-                </li>
+                {(plan.features?.features || []).slice(0, 2).map((feature: string, idx: number) => (
+                  <li key={idx} className="flex items-center text-sm text-gray-700">
+                    <CheckCircle className="h-5 w-5 text-green-600 mr-2 flex-shrink-0" />
+                    {feature}
+                  </li>
+                ))}
               </ul>
               {subscription?.plan?.id === plan.id ? (
                 <button
