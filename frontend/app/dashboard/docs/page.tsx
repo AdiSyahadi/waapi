@@ -88,7 +88,7 @@ export default function DocumentationPage() {
                         Go to <strong>API Keys</strong> menu and create a new key for your application.
                       </p>
                       <div className="bg-gray-50 rounded-lg p-3">
-                        <code className="text-sm text-gray-800">sk_live_1a2b3c4d5e6f7g8h9i0j...</code>
+                        <code className="text-sm text-gray-800">wapi_1a2b3c4d5e6f7g8h9i0j...</code>
                       </div>
                     </div>
                   </div>
@@ -117,7 +117,7 @@ export default function DocumentationPage() {
                       <div className="bg-gray-900 rounded-lg p-4 relative">
                         <button
                           onClick={() => copyCode(`curl -X POST http://72.62.125.132:3000/api/v1/messages/send/text \\
-  -H "X-API-Key: sk_live_your_api_key" \\
+  -H "X-API-Key: wapi_your_api_key" \\
   -H "Content-Type: application/json" \\
   -d '{
     "sessionId": "your-session-id",
@@ -130,7 +130,7 @@ export default function DocumentationPage() {
                         </button>
                         <pre className="text-sm text-green-400 overflow-x-auto pr-12">
 {`curl -X POST http://72.62.125.132:3000/api/v1/messages/send/text \\
-  -H "X-API-Key: sk_live_your_api_key" \\
+  -H "X-API-Key: wapi_your_api_key" \\
   -H "Content-Type: application/json" \\
   -d '{
     "sessionId": "your-session-id",
@@ -164,12 +164,12 @@ export default function DocumentationPage() {
                   <h3 className="text-lg font-semibold text-gray-900 mb-2">Header Format</h3>
                   <div className="bg-gray-900 rounded-lg p-4 relative">
                     <button
-                      onClick={() => copyCode('X-API-Key: sk_live_your_api_key_here', 'header')}
+                      onClick={() => copyCode('X-API-Key: wapi_your_api_key_here', 'header')}
                       className="absolute top-2 right-2 p-2 bg-gray-800 hover:bg-gray-700 rounded text-white transition text-sm"
                     >
                       {copiedCode === 'header' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </button>
-                    <pre className="text-sm text-green-400">X-API-Key: sk_live_your_api_key_here</pre>
+                    <pre className="text-sm text-green-400">X-API-Key: wapi_your_api_key_here</pre>
                   </div>
                 </div>
 
@@ -178,14 +178,14 @@ export default function DocumentationPage() {
                   <div className="bg-gray-900 rounded-lg p-4 relative">
                     <button
                       onClick={() => copyCode(`curl -X GET http://72.62.125.132:3000/api/v1/sessions \\
-  -H "X-API-Key: sk_live_your_api_key_here"`, 'auth-example')}
+  -H "X-API-Key: wapi_your_api_key_here"`, 'auth-example')}
                       className="absolute top-2 right-2 p-2 bg-gray-800 hover:bg-gray-700 rounded text-white transition text-sm"
                     >
                       {copiedCode === 'auth-example' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
                     </button>
                     <pre className="text-sm text-green-400 overflow-x-auto pr-12">
 {`curl -X GET http://72.62.125.132:3000/api/v1/sessions \\
-  -H "X-API-Key: sk_live_your_api_key_here"`}
+  -H "X-API-Key: wapi_your_api_key_here"`}
                     </pre>
                   </div>
                 </div>
@@ -279,7 +279,7 @@ export default function DocumentationPage() {
                 <div className="bg-gray-900 rounded-lg p-4">
                   <pre className="text-sm text-green-400">
 {`curl -X GET http://72.62.125.132:3000/api/v1/sessions \\
-  -H "X-API-Key: sk_live_your_api_key"`}
+  -H "X-API-Key: wapi_your_api_key"`}
                   </pre>
                 </div>
               </div>
@@ -349,7 +349,7 @@ export default function DocumentationPage() {
                       <button
                         onClick={() => copyCode(`<?php
 class WhatsAppAPI {
-    private $apiKey = 'sk_live_your_api_key_here';
+    private $apiKey = 'wapi_your_api_key_here';
     private $baseUrl = 'http://72.62.125.132:3000/api/v1';
     
     public function sendMessage($sessionId, $phone, $message) {
@@ -392,7 +392,7 @@ $result = $wa->sendMessage(
                       <pre className="text-sm text-green-400 overflow-x-auto pr-12">
 {`<?php
 class WhatsAppAPI {
-    private $apiKey = 'sk_live_your_api_key_here';
+    private $apiKey = 'wapi_your_api_key_here';
     private $baseUrl = 'http://72.62.125.132:3000/api/v1';
     
     public function sendMessage($sessionId, $phone, $message) {
@@ -443,7 +443,7 @@ $result = $wa->sendMessage(
 
 class WhatsAppAPI:
     def __init__(self):
-        self.api_key = 'sk_live_your_api_key_here'
+        self.api_key = 'wapi_your_api_key_here'
         self.base_url = 'http://72.62.125.132:3000/api/v1'
         self.headers = {
             'Content-Type': 'application/json',
@@ -479,7 +479,7 @@ print(result)`, 'python-example')}
 
 class WhatsAppAPI:
     def __init__(self):
-        self.api_key = 'sk_live_your_api_key_here'
+        self.api_key = 'wapi_your_api_key_here'
         self.base_url = 'http://72.62.125.132:3000/api/v1'
         self.headers = {
             'Content-Type': 'application/json',
@@ -521,7 +521,7 @@ print(result)`}
 
 class WhatsAppAPI {
   constructor() {
-    this.apiKey = 'sk_live_your_api_key_here';
+    this.apiKey = 'wapi_your_api_key_here';
     this.baseUrl = 'http://72.62.125.132:3000/api/v1';
     this.headers = {
       'Content-Type': 'application/json',
@@ -556,7 +556,7 @@ console.log(result);`, 'js-example')}
 
 class WhatsAppAPI {
   constructor() {
-    this.apiKey = 'sk_live_your_api_key_here';
+    this.apiKey = 'wapi_your_api_key_here';
     this.baseUrl = 'http://72.62.125.132:3000/api/v1';
     this.headers = {
       'Content-Type': 'application/json',
@@ -599,7 +599,7 @@ using Newtonsoft.Json;
 
 public class WhatsAppAPI
 {
-    private readonly string _apiKey = "sk_live_your_api_key_here";
+    private readonly string _apiKey = "wapi_your_api_key_here";
     private readonly string _baseUrl = "http://72.62.125.132:3000/api/v1";
     private readonly HttpClient _httpClient;
 
@@ -645,7 +645,7 @@ using Newtonsoft.Json;
 
 public class WhatsAppAPI
 {
-    private readonly string _apiKey = "sk_live_your_api_key_here";
+    private readonly string _apiKey = "wapi_your_api_key_here";
     private readonly string _baseUrl = "http://72.62.125.132:3000/api/v1";
     private readonly HttpClient _httpClient;
 
