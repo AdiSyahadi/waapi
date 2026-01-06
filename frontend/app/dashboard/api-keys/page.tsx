@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Key, Copy, Trash2, Plus, Eye, EyeOff } from 'lucide-react';
+import { Key, Copy, Trash2, Plus } from 'lucide-react';
 import { apiKeysAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -11,7 +11,6 @@ export default function ApiKeysPage() {
   const [newKeyName, setNewKeyName] = useState('');
   const [createdKey, setCreatedKey] = useState('');
   const [loading, setLoading] = useState(false);
-  const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchApiKeys();
@@ -57,55 +56,56 @@ export default function ApiKeysPage() {
   };
 
   const copyToClipboard = async (text: string) => {
+    // Debug: Check if text is valid
+    if (!text || text.trim() === '') {
+      toast.error('No API key to copy');
+      console.error('Copy failed: empty text');
+      return;
+    }
+
+    console.log('Attempting to copy:', text.substring(0, 20) + '...');
+
     try {
-      // Try modern clipboard API first (works on HTTPS and localhost)
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(text);
-        toast.success('Copied to clipboard!');
-      } else {
-        // Fallback for HTTP (non-secure context)
-        const textArea = document.createElement('textarea');
-        textArea.value = text;
-        textArea.style.position = 'fixed';
-        textArea.style.left = '-999999px';
-        textArea.style.top = '-999999px';
-        document.body.appendChild(textArea);
-        textArea.focus();
-        textArea.select();
+      // Fallback method that works on HTTP
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      
+      // Make textarea visible but off-screen
+      textArea.style.position = 'fixed';
+      textArea.style.top = '0';
+      textArea.style.left = '0';
+      textArea.style.width = '2em';
+      textArea.style.height = '2em';
+      textArea.style.padding = '0';
+      textArea.style.border = 'none';
+      textArea.style.outline = 'none';
+      textArea.style.boxShadow = 'none';
+      textArea.style.background = 'transparent';
+      
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textArea);
         
-        try {
-          const successful = document.execCommand('copy');
-          if (successful) {
-            toast.success('Copied to clipboard!');
-          } else {
-            toast.error('Failed to copy');
-          }
-        } catch (err) {
-          toast.error('Failed to copy');
-        } finally {
-          document.body.removeChild(textArea);
+        if (successful) {
+          toast.success('API key copied to clipboard!');
+          console.log('Copy successful');
+        } else {
+          toast.error('Failed to copy - please try again');
+          console.error('execCommand returned false');
         }
+      } catch (err) {
+        document.body.removeChild(textArea);
+        console.error('execCommand error:', err);
+        toast.error('Failed to copy to clipboard');
       }
     } catch (err) {
       console.error('Failed to copy:', err);
       toast.error('Failed to copy to clipboard');
     }
-  };
-
-  const toggleKeyVisibility = (keyId: string) => {
-    setVisibleKeys(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(keyId)) {
-        newSet.delete(keyId);
-      } else {
-        newSet.add(keyId);
-      }
-      return newSet;
-    });
-  };
-
-  const maskKey = (key: string) => {
-    return `${key.substring(0, 8)}${'•'.repeat(32)}${key.substring(key.length - 8)}`;
   };
 
   return (
@@ -160,24 +160,13 @@ export default function ApiKeysPage() {
                       </span>
                     </div>
 
-                    <div className="flex items-center space-x-2 mb-3">
-                      <code className="bg-gray-100 px-3 py-2 rounded text-sm font-mono text-gray-800">
-                        {visibleKeys.has(apiKey.id) ? apiKey.key : maskKey(apiKey.key || 'sk_live_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')}
+                    <div className="mb-3">
+                      <code className="bg-gray-100 px-3 py-2 rounded text-sm font-mono text-gray-800 inline-block">
+                        {apiKey.key_prefix || 'sk_live_xxxx...'}
                       </code>
-                      <button
-                        onClick={() => toggleKeyVisibility(apiKey.id)}
-                        className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition"
-                        title={visibleKeys.has(apiKey.id) ? 'Hide' : 'Show'}
-                      >
-                        {visibleKeys.has(apiKey.id) ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                      <button
-                        onClick={() => copyToClipboard(apiKey.key || '')}
-                        className="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition"
-                        title="Copy to clipboard"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </button>
+                      <p className="text-xs text-gray-500 mt-2">
+                        🔒 Full key is only visible once after creation for security reasons
+                      </p>
                     </div>
 
                     <div className="flex items-center space-x-6 text-sm text-gray-600">
