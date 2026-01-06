@@ -11,6 +11,7 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showActivateModal, setShowActivateModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [plans, setPlans] = useState([]);
   const [activationForm, setActivationForm] = useState({
@@ -60,6 +61,11 @@ export default function AdminUsersPage() {
       notes: '',
       duration_days: 30
     });
+  };
+
+  const handleViewDetails = (user: any) => {
+    setSelectedUser(user);
+    setShowDetailModal(true);
   };
 
   const handleActivateSubscription = async (e: React.FormEvent) => {
@@ -268,6 +274,7 @@ export default function AdminUsersPage() {
                         <CreditCard className="h-4 w-4" />
                       </button>
                       <button
+                        onClick={() => handleViewDetails(user)}
                         className="text-blue-600 hover:text-blue-700 p-1"
                         title="View details"
                       >
@@ -323,7 +330,7 @@ export default function AdminUsersPage() {
         <div className="bg-white rounded-xl border border-gray-200 p-6">
           <p className="text-sm text-gray-600 mb-1">Paid Plans</p>
           <p className="text-2xl font-bold text-purple-600">
-            {users.filter((u: any) => u.plan && u.plan !== 'Free').length}
+            {users.filter((u: any) => u.subscription?.plan?.name && u.subscription.plan.name !== 'Free').length}
           </p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 p-6">
@@ -475,6 +482,156 @@ export default function AdminUsersPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Detail User */}
+      {showDetailModal && selectedUser && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center p-6 border-b">
+              <h2 className="text-xl font-bold text-gray-900">User Details</h2>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Basic Info */}
+              <div className="border-b pb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Basic Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Name</p>
+                    <p className="font-medium text-gray-900">{selectedUser.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Email</p>
+                    <p className="font-medium text-gray-900">{selectedUser.email}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Status</p>
+                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${
+                      selectedUser.status === 'active'
+                        ? 'bg-green-100 text-green-700'
+                        : selectedUser.status === 'suspended'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {selectedUser.status}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Role</p>
+                    <p className="font-medium text-gray-900">{selectedUser.role || 'user'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Joined</p>
+                    <p className="font-medium text-gray-900">{new Date(selectedUser.createdAt).toLocaleDateString()}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Last Login</p>
+                    <p className="font-medium text-gray-900">
+                      {selectedUser.last_login_at ? new Date(selectedUser.last_login_at).toLocaleDateString() : 'Never'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Subscription Info */}
+              <div className="border-b pb-4">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Subscription</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-600">Plan</p>
+                    <p className="font-medium text-gray-900">
+                      {selectedUser.subscription?.plan?.name || 'Free'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600">Subscription Status</p>
+                    <span className={`inline-block px-2 py-1 text-xs rounded-full ${
+                      selectedUser.subscription?.status === 'active'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {selectedUser.subscription?.status || 'N/A'}
+                    </span>
+                  </div>
+                  {selectedUser.subscription?.current_period_end && (
+                    <div>
+                      <p className="text-sm text-gray-600">Expires</p>
+                      <p className="font-medium text-gray-900">
+                        {new Date(selectedUser.subscription.current_period_end).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Usage Stats */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Usage Statistics</h3>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="bg-blue-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Sessions</p>
+                    <p className="text-2xl font-bold text-blue-600">{selectedUser.sessionsCount || 0}</p>
+                  </div>
+                  <div className="bg-green-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">Messages Sent</p>
+                    <p className="text-2xl font-bold text-green-600">{selectedUser.messagesCount || 0}</p>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-4">
+                    <p className="text-sm text-gray-600 mb-1">API Keys</p>
+                    <p className="text-2xl font-bold text-purple-600">{selectedUser.apiKeysCount || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4">
+                <button
+                  onClick={() => {
+                    setShowDetailModal(false);
+                    handleOpenActivateModal(selectedUser);
+                  }}
+                  className="flex-1 bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors font-medium"
+                >
+                  Manage Subscription
+                </button>
+                {selectedUser.status === 'active' ? (
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      handleSuspendUser(selectedUser.id);
+                    }}
+                    className="flex-1 bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors font-medium"
+                  >
+                    Suspend User
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setShowDetailModal(false);
+                      handleActivateUser(selectedUser.id);
+                    }}
+                    className="flex-1 bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors font-medium"
+                  >
+                    Activate User
+                  </button>
+                )}
+                <button
+                  onClick={() => setShowDetailModal(false)}
+                  className="px-6 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors font-medium"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

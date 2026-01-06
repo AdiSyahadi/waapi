@@ -128,7 +128,13 @@ const getAllUsers = async (req, res) => {
 
     const { count, rows: users } = await db.User.findAndCountAll({
       where,
-      attributes: { exclude: ['password', 'two_factor_secret'] },
+      attributes: { 
+        exclude: ['password', 'two_factor_secret'],
+        include: [
+          [db.sequelize.literal('(SELECT COUNT(*) FROM sessions WHERE sessions.user_id = User.id)'), 'sessionsCount'],
+          [db.sequelize.literal('(SELECT COUNT(*) FROM messages WHERE messages.user_id = User.id)'), 'messagesCount']
+        ]
+      },
       include: [
         {
           model: db.Subscription,
