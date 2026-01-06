@@ -32,8 +32,10 @@ COPY --chown=nodejs:nodejs . .
 
 # Create necessary directories with proper ownership
 # Must be done AFTER COPY to ensure correct permissions
+# Run as root to ensure permissions are set correctly
 RUN mkdir -p /app/sessions /app/logs /app/uploads/temp /app/uploads/media /app/uploads/avatars && \
-    chown -R nodejs:nodejs /app
+    chmod -R 775 /app/sessions /app/logs /app/uploads && \
+    chown -R nodejs:nodejs /app/sessions /app/logs /app/uploads
 
 # Switch to non-root user
 USER nodejs
