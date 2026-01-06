@@ -943,6 +943,70 @@ const unsuspendUser = async (req, res) => {
 };
 
 /**
+ * Activate user (admin) - for pending or inactive users
+ * POST /api/v1/admin/users/:id/activate
+ */
+const activateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const user = await db.User.findByPk(id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    if (user.status === 'active') {
+      return res.status(400).json({
+        success: false,
+        message: 'User is already active'
+      });
+    }
+
+    await user.update({
+      status: 'active',
+      email_verified: true,
+      email_verified_at: new Date(),
+      verification_token: null,
+      suspended_at: null,
+      suspended_reason: null
+    });
+
+    // Log action
+    await db.AuditLog.create({
+      user_id: req.user.id,
+      action: 'admin.user.activate',
+      resource_type: 'user',
+      resource_id: id,
+      description: `Admin activated user: ${user.email} (previous status: ${user.status})`,
+      ip_address: req.ip,
+      user_agent: req.headers['user-agent']
+    });
+
+    res.json({
+      success: true,
+      message: 'User activated successfully',
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        status: 'active',
+        email_verified: true
+      }
+    });
+  } catch (error) {
+    console.error('Activate user error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to activate user',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Force disconnect session (admin)
  */
 const forceDisconnectSession = async (req, res) => {
@@ -1075,6 +1139,7 @@ module.exports = {
   managePlan,
   suspendUser,
   unsuspendUser,
+  activateUser,
   forceDisconnectSession,
   getSystemHealth
 };

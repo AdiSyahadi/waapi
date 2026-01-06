@@ -20,6 +20,7 @@ router.put('/users/:id', adminController.updateUser);
 router.delete('/users/:id', adminController.deleteUser);
 router.post('/users/:id/suspend', adminController.suspendUser);
 router.post('/users/:id/unsuspend', adminController.unsuspendUser);
+router.post('/users/:id/activate', adminController.activateUser);
 
 // Session Management
 router.get('/sessions', adminController.getAllSessions);
