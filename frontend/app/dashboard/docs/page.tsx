@@ -711,7 +711,7 @@ var result = await wa.SendMessage(
         </a>
         
         <a
-          href="http://72.62.125.132:3000/api-docs"
+          href="http://72.62.125.132:3000/api/docs"
           target="_blank"
           rel="noopener noreferrer"
           className="block p-4 bg-white rounded-lg shadow-sm hover:shadow-md transition border border-gray-200"
