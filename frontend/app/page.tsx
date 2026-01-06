@@ -20,9 +20,9 @@ export default function HomePage() {
               <Link href="#pricing" className="text-gray-600 hover:text-gray-900 transition">
                 Pricing
               </Link>
-              <Link href="/docs" className="text-gray-600 hover:text-gray-900 transition">
-                Docs
-              </Link>
+              <a href="http://72.62.125.132:3000/api/docs" target="_blank" rel="noopener noreferrer" className="text-gray-600 hover:text-gray-900 transition">
+                API Docs
+              </a>
               <Link href="/login" className="text-gray-600 hover:text-gray-900 transition">
                 Login
               </Link>
@@ -64,13 +64,15 @@ export default function HomePage() {
                 Start Free Trial
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
-              <Link 
-                href="/docs"
+              <a 
+                href="http://72.62.125.132:3000/api/docs"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="inline-flex items-center justify-center px-8 py-4 border-2 border-gray-300 text-gray-700 rounded-lg hover:border-gray-400 transition text-lg font-semibold"
               >
                 <Code className="mr-2 h-5 w-5" />
-                View Documentation
-              </Link>
+                View API Documentation
+              </a>
             </div>
 
             <p className="mt-6 text-sm text-gray-500">
@@ -223,7 +225,7 @@ export default function HomePage() {
               <ul className="space-y-2">
                 <li><Link href="#features" className="hover:text-white transition">Features</Link></li>
                 <li><Link href="#pricing" className="hover:text-white transition">Pricing</Link></li>
-                <li><Link href="/docs" className="hover:text-white transition">Documentation</Link></li>
+                <li><a href="http://72.62.125.132:3000/api/docs" target="_blank" rel="noopener noreferrer" className="hover:text-white transition">API Documentation</a></li>
               </ul>
             </div>
             <div>
