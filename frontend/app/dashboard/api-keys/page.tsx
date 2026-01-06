@@ -56,9 +56,40 @@ export default function ApiKeysPage() {
     }
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Copied to clipboard!');
+  const copyToClipboard = async (text: string) => {
+    try {
+      // Try modern clipboard API first (works on HTTPS and localhost)
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        toast.success('Copied to clipboard!');
+      } else {
+        // Fallback for HTTP (non-secure context)
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+          const successful = document.execCommand('copy');
+          if (successful) {
+            toast.success('Copied to clipboard!');
+          } else {
+            toast.error('Failed to copy');
+          }
+        } catch (err) {
+          toast.error('Failed to copy');
+        } finally {
+          document.body.removeChild(textArea);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to copy:', err);
+      toast.error('Failed to copy to clipboard');
+    }
   };
 
   const toggleKeyVisibility = (keyId: string) => {
