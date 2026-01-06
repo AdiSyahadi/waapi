@@ -30,9 +30,10 @@ COPY --from=builder /app/node_modules ./node_modules
 # Copy application code
 COPY --chown=nodejs:nodejs . .
 
-# Create necessary directories
-RUN mkdir -p /app/sessions /app/logs /app/uploads && \
-    chown -R nodejs:nodejs /app/sessions /app/logs /app/uploads
+# Create necessary directories with proper ownership
+# Must be done AFTER COPY to ensure correct permissions
+RUN mkdir -p /app/sessions /app/logs /app/uploads/temp /app/uploads/media /app/uploads/avatars && \
+    chown -R nodejs:nodejs /app
 
 # Switch to non-root user
 USER nodejs
