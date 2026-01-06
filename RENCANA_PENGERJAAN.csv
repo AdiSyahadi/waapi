@@ -1,0 +1,193 @@
+Phase,Task,Status,Priority,Description,Files,Dependencies,Notes
+1,Setup Project Structure,not-started,High,"Inisialisasi project Node.js, install dependencies (express, @whiskeysockets/baileys, dll), setup folder structure","package.json, .env, .env.example, .gitignore, src/app.js",None,Core foundation
+1,Setup Database Config,not-started,High,"Setup database connection (MySQL/PostgreSQL production), create migrations folder, seeder","src/config/database.js, src/config/config.js, migrations/",None,Production DB
+1,Setup Redis Config,not-started,High,"Setup Redis connection untuk queue system dan caching","src/config/redis.js",None,Required for queue & cache
+1,File Upload Config,not-started,High,"Setup multer/formidable untuk handle file upload dengan validasi size & type","src/config/upload.js, src/middleware/fileUpload.js",None,Media handling
+1,Create Base Models,not-started,High,"Buat models: User, Session, Message, ApiKey, Webhook, Subscription, Plan, AuditLog, Organization","src/models/",1.2,All database models
+1,Database Migrations,not-started,High,"Create database migration files untuk semua tables dengan proper indexes","migrations/",1.5,Schema versioning
+1,Logger Utility,not-started,High,"Setup logging system (Winston/Pino) untuk debugging dan audit trail","src/utils/logger.js",None,Critical for debugging
+1,Environment Variables,not-started,High,"Setup .env.example dengan semua required variables, validation dengan Joi","src/config/env.js, .env.example",None,Config management
+2,Password Hashing,not-started,High,"Setup bcrypt untuk password hashing dan verification","src/utils/hash.js",None,Security
+2,JWT Token System,not-started,High,"Implement JWT access token + refresh token mechanism dengan expiry","src/utils/jwt.js",None,Authentication core
+2,User Registration & Login,not-started,High,"User registration dengan email verification, login dengan JWT, logout","src/controllers/authController.js","2.1,2.2",Auth flow
+2,Email Service,not-started,High,"Setup email service (Nodemailer/SendGrid) untuk verification & notifications","src/services/emailService.js",None,Email delivery
+2,Email Verification,not-started,High,"Send verification email, verify token, resend verification logic","src/controllers/authController.js",2.4,Account activation
+2,Password Reset,not-started,High,"Forgot password, send reset link via email, reset password dengan token","src/controllers/authController.js",2.4,Password recovery
+2,API Key Management,not-started,High,"Generate, list, revoke, rotate API keys per user dengan encryption","src/controllers/apiKeyController.js",None,API security
+2,Usage Quota System,not-started,High,"Track usage per user (messages sent, sessions limit) untuk billing enforcement","src/services/quotaService.js",1.5,Billing enforcement
+2,Multi-User System,not-started,High,"Implement multi-user/tenant system dengan isolated sessions per user","src/models/User.js",1.5,Multi-tenancy
+2,Two-Factor Authentication,not-started,High,"2FA/MFA dengan TOTP (Google Authenticator, Authy), SMS backup codes","src/services/twoFactorService.js",2.3,Enhanced security
+2,IP Whitelist,not-started,Medium,"IP whitelist untuk API access (enterprise feature), CIDR support","src/middleware/ipWhitelist.js",1.5,Enterprise security
+2,Auth Routes,not-started,High,"Setup routes: register, login, logout, verify-email, forgot-password, reset-password, 2fa/enable, 2fa/verify","src/routes/authRoutes.js","2.3-2.11",All auth endpoints
+3,Authentication Middleware,not-started,High,"Middleware untuk API key + JWT verification dengan role checking (user/admin)","src/middleware/auth.js",2.2,Request auth
+3,Validation Middleware,not-started,High,"Middleware validasi request body dengan Joi/express-validator, custom validators","src/middleware/validation.js",None,Input validation
+3,Rate Limiting,not-started,High,"Rate limiting per user/API key dengan Redis, different limits per plan","src/middleware/rateLimit.js",1.3,Abuse prevention
+3,Error Handling Middleware,not-started,High,"Global error handler dengan consistent response format, error logging","src/middleware/errorHandler.js",1.7,Error management
+3,Input Sanitization,not-started,High,"Sanitize input untuk prevent XSS, SQL Injection, NoSQL Injection","src/middleware/sanitizer.js",None,Security layer
+3,CORS Configuration,not-started,High,"Setup CORS dengan whitelist domains, credentials support","src/app.js",None,Frontend access
+3,HTTPS Enforcement,not-started,High,"Force HTTPS di production, redirect HTTP ke HTTPS middleware","src/middleware/security.js",None,Transport security
+3,Security Headers,not-started,High,"Implement Helmet.js untuk security headers (CSP, HSTS, X-Frame-Options, etc)","src/middleware/security.js",None,HTTP security
+3,API Versioning,not-started,High,"Setup API versioning (/api/v1/) untuk backward compatibility","src/app.js, src/routes/index.js",None,Version management
+3,Request ID Tracking,not-started,Medium,"Generate unique request ID untuk tracking dan debugging di logs","src/middleware/requestId.js",1.7,Request tracing
+3,Helper Functions,not-started,Medium,"Helper functions: format number, validate phone, format response, etc","src/utils/helper.js",None,Utilities
+4,Session Management Core,not-started,High,"Implement core WhatsApp connection dengan Baileys, handle QR & pairing","src/services/whatsappService.js",1.5,WA connection
+4,QR Code Management,not-started,High,"Generate QR code, handle expiry (45s), regenerate, convert to base64/PNG","src/services/qrService.js",4.1,QR handling
+4,Pairing Code Method,not-started,Medium,"Alternative pairing dengan 8-digit code (tanpa QR scan)","src/services/whatsappService.js",4.1,Alternative auth
+4,Session Controller,not-started,High,"Controller: create session, get QR, list sessions, delete, logout, status","src/controllers/sessionController.js","4.1-4.3",Session management
+4,Session Storage,not-started,High,"Session persistence ke database + file system dengan encryption","src/services/whatsappService.js","1.2,1.5",Data persistence
+4,Session Limit Enforcement,not-started,High,"Enforce session limit per user based on subscription plan","src/middleware/sessionLimit.js",2.8,Plan limits
+4,Auto-Reconnect Handler,not-started,High,"Auto-reconnect dengan exponential backoff ketika session disconnect","src/services/whatsappService.js",4.1,Connection stability
+4,Session Status Monitor,not-started,High,"Monitor realtime status: connected, disconnected, connecting, qr, pairing","src/services/sessionMonitor.js",4.1,Status tracking
+4,Multi-Device Support,not-started,Medium,"Handle multiple devices per WhatsApp number (companion mode)","src/services/whatsappService.js",4.1,Multi-device
+4,File Validation Middleware,not-started,High,"Validate file size (max 16MB), type (image/video/audio/doc), dimensions","src/middleware/fileValidation.js",1.4,Media validation
+4,Session Routes,not-started,High,"Routes: POST /create, GET /qr, GET /list, DELETE /:id, POST /logout, GET /status/:id","src/routes/sessionRoutes.js",4.4,Session API
+5,Send Text Message,not-started,High,"Send text dengan formatting (bold, italic, strikethrough, monospace)","src/controllers/messageController.js",4.1,Basic messaging
+5,Send Media Messages,not-started,High,"Send image, video, audio, document dengan caption, compression, thumbnail","src/controllers/messageController.js",4.11,Media messaging
+5,Send Location & Contact,not-started,High,"Send location (lat/long), contact/vcard (single & multiple contacts)","src/controllers/messageController.js",4.1,Location & contacts
+5,Send Button Message,not-started,High,"Send button message (max 3 buttons) dengan text & URL buttons","src/controllers/messageController.js",4.1,Interactive msgs
+5,Send List Message,not-started,High,"Send list message dengan sections, rows, title, description","src/controllers/messageController.js",4.1,Interactive lists
+5,Send Template Message,not-started,Medium,"Send template message dengan variables replacement","src/controllers/messageController.js",4.1,Template msgs
+5,Send Sticker,not-started,Medium,"Send sticker (auto-convert image to webp format)","src/controllers/messageController.js",4.11,Stickers
+5,Send Poll,not-started,Low,"Send poll dengan multiple options (single/multiple choice)","src/controllers/messageController.js",4.1,Polls
+5,Broadcast Messages,not-started,High,"Send message to multiple contacts at once (broadcast list), track delivery","src/controllers/messageController.js",4.1,Bulk messaging
+5,Message Templates Management,not-started,Medium,"Save, list, update, delete message templates untuk reuse","src/controllers/templateController.js",1.5,Template storage
+5,Basic Message Routes,not-started,High,"Routes: POST /text, /media, /location, /contact, /button, /list, /broadcast, /poll","src/routes/messageRoutes.js","5.1-5.9",Message API
+5,Template Routes,not-started,Medium,"Routes: POST /templates, GET /templates, PUT /templates/:id, DELETE /templates/:id, POST /templates/:id/use","src/routes/templateRoutes.js",5.10,Template API
+6,Reply to Message,not-started,High,"Reply message dengan quote (text & media support)","src/controllers/messageController.js",4.1,Message reply
+6,Forward Message,not-started,High,"Forward message ke contact/group lain (single/multiple recipients)","src/controllers/messageController.js",4.1,Message forward
+6,Delete Message,not-started,High,"Delete/revoke message (untuk sender only atau untuk semua)","src/controllers/messageController.js",4.1,Message deletion
+6,React to Message,not-started,Medium,"React message dengan emoji, remove reaction","src/controllers/messageController.js",4.1,Reactions
+6,Edit Message,not-started,Medium,"Edit sent message (fitur baru WA, text only, 15min window)","src/controllers/messageController.js",4.1,Message editing
+6,Advanced Message Routes,not-started,High,"Routes: POST /reply, /forward, DELETE /:id, POST /react, PUT /edit, POST /unreact","src/routes/messageRoutes.js","6.1-6.5",Advanced API
+7,Download Media,not-started,High,"Download media dari message dengan auto-decrypt, save to local/cloud storage","src/controllers/chatController.js",4.1,Media download
+7,Get Chat List,not-started,High,"Get list chats dengan filter: unread, archived, pinned, groups, personal","src/controllers/chatController.js",4.1,Chat list
+7,Get Chat History,not-started,High,"Get chat history dengan pagination, limit, offset, reverse order","src/controllers/chatController.js",4.1,Message history
+7,Search Messages,not-started,Medium,"Search messages by text, sender, date range, media type","src/controllers/chatController.js",4.1,Message search
+7,Mark as Read,not-started,High,"Mark message/chat as read (single message atau bulk messages)","src/controllers/chatController.js",4.1,Read receipts
+7,Send Presence,not-started,Medium,"Send presence: typing, recording, paused, available, unavailable","src/controllers/chatController.js",4.1,Presence status
+7,Archive/Unarchive Chat,not-started,Low,"Archive dan unarchive chat (hide from main list)","src/controllers/chatController.js",4.1,Chat archiving
+7,Pin/Unpin Chat,not-started,Low,"Pin chat to top (max 3 pins), unpin chat","src/controllers/chatController.js",4.1,Pin chats
+7,Mute/Unmute Chat,not-started,Low,"Mute chat notifications (8h, 1w, always), unmute chat","src/controllers/chatController.js",4.1,Notification control
+7,Block/Unblock Contact,not-started,Low,"Block contact (no messages), unblock contact","src/controllers/chatController.js",4.1,Contact blocking
+7,Auto-Reply Rules,not-started,Medium,"Simple auto-reply rules: keyword triggers, time-based, away messages","src/services/autoReplyService.js",4.1,Chatbot basics
+7,Status/Story Posting,not-started,Low,"Post status/story (text, image, video) dengan expiry 24h, view status","src/controllers/statusController.js",4.1,WA Status feature
+7,Chat Management Routes,not-started,High,"Routes: GET /chats, /history, /search, POST /read, /presence, /archive, /pin, /mute, /block, GET /download/:msgId","src/routes/chatRoutes.js","7.1-7.12",Chat API
+7,Auto-Reply Routes,not-started,Medium,"Routes: POST /auto-reply, GET /auto-reply, PUT /auto-reply/:id, DELETE /auto-reply/:id, POST /auto-reply/test","src/routes/autoReplyRoutes.js",7.11,Auto-reply API
+7,Status Routes,not-started,Low,"Routes: POST /status, GET /status, DELETE /status/:id, GET /status/views/:id","src/routes/statusRoutes.js",7.12,Status API
+8,Group Create,not-started,High,"Create group dengan name, description, participants (min 2)","src/controllers/groupController.js",4.1,Group creation
+8,Group Info,not-started,High,"Get group info: name, description, participants, admins, created date","src/controllers/groupController.js",4.1,Group details
+8,Update Group Name,not-started,High,"Update group name (admin only)","src/controllers/groupController.js",4.1,Group settings
+8,Update Group Description,not-started,High,"Update group description (admin only)","src/controllers/groupController.js",4.1,Group settings
+8,Update Group Picture,not-started,Medium,"Update group picture (admin only), remove picture","src/controllers/groupController.js",4.11,Group media
+8,Add Participants,not-started,High,"Add participants to group (admin only), bulk add support","src/controllers/groupController.js",4.1,Member mgmt
+8,Remove Participants,not-started,High,"Remove/kick participants (admin only), bulk remove","src/controllers/groupController.js",4.1,Member mgmt
+8,Promote to Admin,not-started,High,"Promote participant to admin (super admin only)","src/controllers/groupController.js",4.1,Admin mgmt
+8,Demote Admin,not-started,High,"Demote admin to participant (super admin only)","src/controllers/groupController.js",4.1,Admin mgmt
+8,Leave Group,not-started,High,"Leave group as participant or admin","src/controllers/groupController.js",4.1,Group exit
+8,Get Invite Link,not-started,Medium,"Get/generate group invite link","src/controllers/groupController.js",4.1,Group invite
+8,Revoke Invite Link,not-started,Medium,"Revoke current invite link, generate new one (admin only)","src/controllers/groupController.js",4.1,Security
+8,Group Routes,not-started,High,"Routes: POST /create, GET /:id, PUT /name, /description, /picture, POST /add, /remove, /promote, /demote, /leave, GET /invite, POST /revoke-invite","src/routes/groupRoutes.js","8.1-8.12",Group API
+9,Get Contact List,not-started,High,"Get all contacts dengan name, number, profile picture","src/controllers/contactController.js",4.1,Contact list
+9,Check Number Registered,not-started,High,"Check if number registered on WhatsApp (bulk check support, max 100)","src/controllers/contactController.js",4.1,Number validation
+9,Get Contact Info,not-started,High,"Get contact info: name, status, profile picture, last seen (if allowed)","src/controllers/contactController.js",4.1,Contact details
+9,Get Profile Picture,not-started,Medium,"Get profile picture URL (contact or own, high/low quality)","src/controllers/contactController.js",4.1,Profile pics
+9,Update Own Profile Picture,not-started,Medium,"Update own profile picture (upload & set)","src/controllers/contactController.js",4.11,Profile update
+9,Get Profile Status,not-started,Low,"Get profile status/about (own or contact)","src/controllers/contactController.js",4.1,Status/about
+9,Update Profile Status,not-started,Low,"Update own profile status/about (max 139 chars)","src/controllers/contactController.js",4.1,Status update
+9,Contact Routes,not-started,High,"Routes: GET /contacts, POST /check, GET /:number, GET /profile-picture, PUT /profile-picture, GET /status, PUT /status","src/routes/contactRoutes.js","9.1-9.7",Contact API
+10,Webhook Service Core,not-started,High,"Webhook system untuk send events ke external URL dengan queue (Redis-based)","src/services/webhookService.js",1.3,Event delivery
+10,Webhook Security,not-started,High,"Implement HMAC-SHA256 signature verification untuk webhook security","src/utils/webhookSigner.js",None,Webhook auth
+10,Event Handlers,not-started,High,"Handle events: message.in, message.out, message.status, group.*, presence.*, connection.*","src/services/whatsappService.js",4.1,Event system
+10,Message Status Tracking,not-started,High,"Track status: sent, delivered, read, failed dan trigger webhook","src/services/whatsappService.js",10.1,Status tracking
+10,Webhook Retry Mechanism,not-started,High,"Retry dengan exponential backoff (max 3x), dead letter queue untuk failed webhooks","src/services/webhookService.js",10.1,Reliability
+10,Webhook Event Filtering,not-started,High,"User pilih events yang di-trigger: message.*, group.*, connection.*, status.*","src/controllers/webhookController.js",10.1,Event filtering
+10,Webhook Configuration,not-started,High,"Set/update webhook URL per session, add custom headers, enable/disable","src/controllers/webhookController.js",10.1,Webhook config
+10,Webhook Logs,not-started,Medium,"Save webhook delivery logs: success, failed, retry count, response time, payload","src/models/WebhookLog.js",1.5,Audit trail
+10,Webhook Testing,not-started,Medium,"Test webhook connection dengan dummy payload, verify signature","src/controllers/webhookController.js","10.1,10.2",Testing tool
+10,Webhook Routes,not-started,High,"Routes: POST /configure, GET /logs, POST /test, PUT /events, GET /events, DELETE /configure","src/routes/webhookRoutes.js","10.6-10.9",Webhook API
+11,Message Queue Setup,not-started,High,"Setup BullMQ dengan Redis untuk handle bulk messages","src/services/queueService.js",1.3,Queue system
+11,Queue Worker,not-started,High,"Dedicated worker process untuk process message queue dengan concurrency (4 concurrent)","src/workers/messageWorker.js",11.1,Queue processing
+11,Queue Monitoring UI,not-started,High,"Integrate Bull Board untuk monitoring: pending, active, completed, failed, delayed jobs","src/routes/queueBoard.js",11.1,Queue dashboard
+11,Bulk Send Messages,not-started,High,"Send bulk messages dengan queue, progress tracking, pause, resume, cancel","src/controllers/bulkController.js","11.1,11.2",Bulk messaging
+11,Scheduled Messages,not-started,High,"Schedule message sending dengan node-cron/agenda, timezone support, recurring","src/services/schedulerService.js",11.1,Message scheduling
+11,Failed Job Handler,not-started,High,"Handle failed jobs: retry policy (3x), move to dead letter queue, admin alert","src/services/queueService.js",11.1,Error handling
+11,Message History Storage,not-started,High,"Save message history ke database: sent, received, status, media URLs, metadata","src/models/MessageLog.js",1.5,Data persistence
+11,Import Contacts CSV,not-started,Medium,"Upload & parse CSV file untuk bulk contact import (name, number), validation","src/controllers/bulkController.js",4.11,CSV import
+11,Bulk Routes,not-started,High,"Routes: POST /bulk-send, /schedule, GET /jobs, /job/:id, PUT /cancel/:id, POST /import-contacts, DELETE /schedule/:id","src/routes/bulkRoutes.js","11.4-11.8",Bulk API
+12,Admin Panel Routes,not-started,High,"Routes untuk admin: manage users, view stats, system health, logs, organizations","src/routes/adminRoutes.js",3.1,Admin interface
+12,User Management Admin,not-started,High,"Admin: list all users, suspend/activate, reset password, view details, delete, impersonate","src/controllers/adminController.js",3.1,User admin
+12,System Health Check,not-started,High,"Check health: database connection, Redis, disk space (<80%), memory, CPU, sessions","src/controllers/healthController.js",None,Health monitoring
+12,System Metrics,not-started,High,"Monitor & expose metrics: CPU %, RAM usage, disk I/O, network, active connections, uptime","src/services/metricsService.js",None,System metrics
+12,User Dashboard Stats,not-started,High,"User stats: total messages sent, sessions active, quota used/remaining, success rate","src/controllers/dashboardController.js",11.7,User analytics
+12,Admin Dashboard Stats,not-started,High,"Admin stats: total users, revenue, active sessions, system load, MRR, churn rate","src/controllers/adminController.js",11.7,Admin analytics
+12,Audit Logs,not-started,High,"Log admin actions: user suspend, delete, config change, impersonate untuk compliance","src/models/AuditLog.js",1.5,Compliance
+12,Logs Viewer,not-started,Medium,"View application logs dengan filter (level, date, user), search, pagination, download","src/controllers/logController.js",1.7,Log management
+12,Session Backup Service,not-started,Medium,"Auto backup session data periodically ke cloud storage (S3/GCS), restore capability","src/services/backupService.js",4.5,Data backup
+12,Database Backup,not-started,Medium,"Schedule automatic database backup dengan retention policy (daily 7d, weekly 30d)","src/services/dbBackupService.js",1.2,DB backup
+12,Team/Organization Support,not-started,High,"Multi-user per account: owner, admin, member roles, permissions, invitations","src/models/Organization.js",1.5,Team collaboration
+12,API Usage History,not-started,High,"Track & display API usage per user: requests count, endpoints hit, response time, errors","src/controllers/usageController.js",11.7,Usage tracking
+12,Abuse Detection System,not-started,High,"Detect spam patterns, rate limit violations, suspicious activity, auto-ban, manual review","src/services/abuseDetectionService.js",11.7,Security
+12,Organization Routes,not-started,High,"Routes: POST /org, GET /org, POST /org/invite, PUT /org/member/:id/role, DELETE /org/member/:id, GET /org/usage","src/routes/organizationRoutes.js",12.11,Organization API
+13,Swagger Documentation,not-started,High,"Complete API docs dengan Swagger/OpenAPI 3.0 spec + interactive UI (Swagger UI)","swagger.json, docs/swagger.yaml",None,API docs
+13,Postman Collection,not-started,High,"Postman collection untuk testing: environments (dev, staging, prod), all endpoints, examples","POSTMAN_COLLECTION.json",None,Testing tool
+13,Integration Examples,not-started,High,"Code examples: Laravel (PHP), Express (Node.js), FastAPI (Python), Go, cURL, Java","examples/",None,Integration guides
+13,SDK Development,not-started,Medium,"Official SDK: JavaScript/TypeScript (npm), PHP (composer) untuk easier integration","sdk/",None,Client libraries
+13,Environment Setup Guide,not-started,High,"Complete setup guide: requirements, installation, configuration (dev & prod), troubleshooting","README.md, docs/SETUP.md",None,Setup docs
+13,API Usage Guide,not-started,High,"Tutorial: authentication, send messages, webhooks, best practices, rate limits, errors","docs/USAGE_GUIDE.md",None,User guide
+13,Troubleshooting Guide,not-started,Medium,"Common issues, solutions, FAQ: session disconnect, QR expired, rate limit, media upload","docs/TROUBLESHOOTING.md",None,Support docs
+13,Changelog,not-started,Medium,"Maintain changelog: version, date, new features, breaking changes, fixes, deprecations","CHANGELOG.md",None,Version history
+13,Rate Limits Documentation,not-started,High,"Document rate limits per plan, quota usage, upgrade paths, pricing tiers, overage","docs/RATE_LIMITS.md",None,Pricing docs
+13,GDPR Compliance Tools,not-started,High,"Data export (JSON/CSV), deletion request, consent management, privacy policy, data retention","src/controllers/gdprController.js",1.5,GDPR/privacy
+13,Terms of Service API,not-started,High,"User must accept ToS before use, version tracking, update notifications, acceptance log","src/controllers/tosController.js",1.5,Legal compliance
+13,Referral Program,not-started,Medium,"Referral system: generate unique code, track signups, reward credits, leaderboard","src/services/referralService.js",15.4,Growth hacking
+13,API Deprecation System,not-started,Low,"Sunset old API versions: deprecation notices, migration guides, grace period (6 months)","src/middleware/deprecation.js",3.9,Version mgmt
+13,GDPR Routes,not-started,High,"Routes: GET /gdpr/export, POST /gdpr/delete-request, GET /gdpr/status, GET /privacy-policy, POST /consent","src/routes/gdprRoutes.js",13.10,GDPR API
+13,ToS Routes,not-started,High,"Routes: GET /tos, POST /tos/accept, GET /tos/history, GET /tos/current-version","src/routes/tosRoutes.js",13.11,ToS API
+14,Unit Testing,not-started,Medium,"Unit tests untuk core functions dengan Jest/Mocha (helpers, utils, services), 80%+ coverage","tests/unit/",None,Testing
+14,Integration Testing,not-started,Medium,"Integration tests untuk API endpoints dengan mock Baileys connection, supertest","tests/integration/",4.1,API testing
+14,E2E Testing,not-started,Low,"End-to-end testing dengan real WhatsApp connection (staging environment only), Playwright","tests/e2e/",4.1,E2E testing
+14,Test Coverage,not-started,Medium,"Setup code coverage reporting dengan Istanbul/nyc (target 80%+), badges, CI integration","jest.config.js","14.1,14.2",Coverage reporting
+14,Docker Multi-Stage,not-started,High,"Create Dockerfile multi-stage (build + production) untuk smaller image size (<500MB)","Dockerfile",None,Container
+14,Docker Compose,not-started,High,"docker-compose.yml: app, database, Redis, worker, nginx, volumes, networks","docker-compose.yml",14.5,Local dev
+14,Docker Registry,not-started,Medium,"CI/CD: auto build & push Docker images ke Docker Hub/GitHub Container Registry/AWS ECR",".github/workflows/docker.yml",14.5,CI/CD
+14,PM2 Configuration,not-started,High,"PM2 ecosystem: clustering (4 instances), auto-restart, log rotation, watch mode, max memory","ecosystem.config.js",None,Process mgmt
+14,Nginx Config,not-started,High,"Nginx: reverse proxy, SSL termination, load balancing, rate limiting (1000 req/min), gzip","nginx.conf.example",None,Web server
+14,SSL/TLS Setup,not-started,High,"Guide: Let's Encrypt SSL setup, auto-renewal dengan certbot, redirect HTTP to HTTPS","docs/SSL_SETUP.md",None,SSL guide
+14,Load Balancing Strategy,not-started,Medium,"Setup load balancer: round-robin, sticky sessions, health checks, failover","docs/LOAD_BALANCING.md",None,Scalability
+14,Deployment Guide VPS,not-started,High,"Deploy to VPS: Ubuntu 22.04 setup, Nginx, PM2, SSL, firewall (ufw), security hardening","docs/DEPLOYMENT_VPS.md",None,VPS deployment
+14,Deployment Guide Cloud,not-started,High,"Deploy to cloud: AWS (EC2, RDS, ElastiCache, S3), DigitalOcean, Heroku, Railway, GCP","docs/DEPLOYMENT_CLOUD.md",None,Cloud deployment
+15,Subscription Plans Model,not-started,High,"Define plans: Free (1 session, 100 msg/day), Basic, Pro, Enterprise dengan limits & features","src/models/Plan.js, seeds/plans.js",1.5,Pricing tiers
+15,Stripe Integration,not-started,High,"Stripe: checkout session, subscription management, webhook handlers, payment intents","src/services/stripeService.js",None,Payment gateway
+15,PayPal Integration,not-started,Medium,"PayPal: subscription billing, webhook handlers sebagai alternative payment method","src/services/paypalService.js",None,Alt payment
+15,Subscription Management,not-started,High,"Create, upgrade, downgrade, cancel, pause, resume subscriptions, proration","src/controllers/subscriptionController.js",15.2,Billing mgmt
+15,Invoice Generation,not-started,High,"Auto-generate invoices (PDF), send via email, download, payment history, tax support","src/services/invoiceService.js",2.4,Invoicing
+15,Payment Webhooks,not-started,High,"Handle webhooks: payment.success, payment.failed, subscription.cancelled, refund.created","src/controllers/paymentWebhookController.js","15.2,15.3",Payment events
+15,Billing Portal,not-started,High,"Customer portal: view plan, manage subscription, update payment methods, download invoices","src/routes/billingRoutes.js","15.4,15.5",Customer self-service
+15,Trial Period,not-started,Medium,"Free trial (7/14 days), auto-upgrade to paid or downgrade to free, trial reminders","src/services/trialService.js",15.4,Trial mgmt
+15,Usage-Based Billing,not-started,Medium,"Track & bill based on message usage (metered billing), overage charges, usage alerts","src/services/usageBillingService.js",2.8,Metered billing
+15,Discount Codes,not-started,Low,"Promo codes, coupons: percentage/fixed amount, duration, usage limit, one-time/recurring","src/models/Coupon.js",1.5,Promotions
+15,Dunning Management,not-started,Medium,"Handle failed payments: retry logic, email reminders, grace period, auto-downgrade","src/services/dunningService.js",15.2,Payment recovery
+15,Payment Routes,not-started,High,"Routes: POST /subscribe, /cancel, PUT /upgrade, GET /invoices, /portal, POST /apply-coupon, GET /plans, /current-plan","src/routes/billingRoutes.js","15.4-15.11",Billing API
+16,User Analytics Dashboard,not-started,High,"User dashboard: messages sent over time (charts), success rate, active sessions, trends","src/controllers/analyticsController.js",11.7,User insights
+16,Message Analytics,not-started,High,"Track: total sent, delivered, read, failed per session, media types breakdown, hourly stats","src/services/analyticsService.js",11.7,Message metrics
+16,Session Analytics,not-started,High,"Track: session uptime %, reconnection count, data usage (MB), messages/session, avg response time","src/services/analyticsService.js",11.7,Session metrics
+16,Revenue Analytics,not-started,High,"Admin: revenue over time, MRR (Monthly Recurring Revenue), churn rate, LTV, plans distribution pie chart","src/controllers/adminAnalyticsController.js",11.7,Revenue metrics
+16,Export Reports,not-started,High,"Export analytics to: CSV, Excel (XLSX), PDF dengan custom date range, scheduled reports","src/services/exportService.js",None,Data export
+16,Real-time Dashboard,not-started,Medium,"Real-time stats dengan WebSocket/Server-Sent Events untuk live updates, notifications","src/services/realtimeService.js",4.8,Real-time data
+16,Custom Date Range,not-started,Medium,"Filter analytics by custom date range, compare periods (vs last month/year), forecasting","src/controllers/analyticsController.js",16.1,Date filtering
+16,Webhook Analytics,not-started,Medium,"Track: webhook success rate %, avg response time, failures by endpoint, retry stats","src/services/analyticsService.js",10.8,Webhook metrics
+16,Funnel Analytics,not-started,Low,"Track user funnel: signup > trial > paid, conversion rates, drop-off points","src/services/analyticsService.js",15.4,Conversion tracking
+16,Analytics Routes,not-started,High,"Routes: GET /analytics, /messages, /sessions, /revenue, /export, /realtime, /funnel, /webhooks","src/routes/analyticsRoutes.js","16.1-16.9",Analytics API
+17,Sentry Integration,not-started,High,"Integrate Sentry/Rollbar untuk error tracking, alerting, source maps, release tracking","src/config/sentry.js",None,Error monitoring
+17,APM Integration,not-started,High,"Integrate New Relic/DataDog untuk APM, performance monitoring, slow queries, traces","src/config/monitoring.js",None,Performance monitoring
+17,Centralized Logging,not-started,High,"Centralized logging dengan Winston/Pino + structured logs (JSON), log levels, context","src/utils/logger.js",1.7,Logging
+17,Log Aggregation,not-started,Medium,"Ship logs to: ELK Stack (Elasticsearch, Logstash, Kibana), Papertrail, CloudWatch, Logtail","src/config/logs.js",17.3,Log management
+17,Uptime Monitoring,not-started,High,"Setup uptime monitoring: Pingdom, UptimeRobot, StatusCake (5min interval), multi-region checks","docs/MONITORING.md",None,Uptime tracking
+17,Alert System,not-started,High,"Alerts via email/Slack/Telegram/PagerDuty: error spike (>100/min), downtime, high load (>80%), disk full","src/services/alertService.js",2.4,Alert notifications
+17,Database Query Optimization,not-started,Medium,"Optimize slow queries (>1s), add missing indexes, query analysis, EXPLAIN plans","docs/OPTIMIZATION.md",1.6,DB optimization
+17,Database Indexing,not-started,High,"Create proper indexes: user_id, session_id, message_id, created_at, status, compound indexes","migrations/",1.6,Index optimization
+17,Redis Caching Strategy,not-started,High,"Cache: session data (TTL 1h), user data (30min), API responses (5min), cache invalidation","src/services/cacheService.js",1.3,Caching
+17,Database Sharding,not-started,Low,"Horizontal sharding strategy untuk scale: shard by user_id, shard routing, cross-shard queries","docs/SHARDING.md",1.2,Scale strategy
+17,Hot Backup/Failover,not-started,Medium,"Setup hot backup: master-slave replication, automatic failover, read replicas","docs/HIGH_AVAILABILITY.md",1.2,High availability
+17,CDN Setup,not-started,Low,"Setup CDN untuk serve static files & media: CloudFlare, AWS CloudFront, custom domain","docs/CDN_SETUP.md",None,Content delivery
+17,Prometheus Metrics,not-started,Medium,"Expose Prometheus metrics endpoint: HTTP requests, response time, errors, custom business metrics","src/routes/metricsRoutes.js",None,Metrics collection

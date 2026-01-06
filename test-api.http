@@ -1,0 +1,743 @@
+### WhatsApp API Testing with REST Client Extension
+### Install "REST Client" extension by Huachao Mao in VS Code
+### Then click "Send Request" above each request
+
+@baseUrl = http://localhost:3000/api/v1
+@token = 
+
+### 1. Health Check
+GET {{baseUrl}}/health
+
+### 2. Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "testuser@example.com",
+  "password": "Test123456"
+}
+
+### 3. Extract token (run after login)
+@token = {{login.response.body.token}}
+
+### 4. Get Profile
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer {{token}}
+
+### 5. Create WhatsApp Session (QR Code Mode)
+POST {{baseUrl}}/sessions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "My WhatsApp Session",
+  "use_pairing": false
+}
+
+### 6. Create WhatsApp Session (Pairing Code Mode)
+# @name createSession
+POST {{baseUrl}}/sessions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Pairing Session",
+  "use_pairing": true,
+  "phone_number": "6281234567890"
+}
+
+### 7. Get Sessions
+GET {{baseUrl}}/sessions
+Authorization: Bearer {{token}}
+
+### 8. Get QR Code
+@sessionId = {{createSession.response.body.session.session_id}}
+GET {{baseUrl}}/sessions/{{sessionId}}/qr
+Authorization: Bearer {{token}}
+
+### 9. Get Session Status
+GET {{baseUrl}}/sessions/{{sessionId}}
+Authorization: Bearer {{token}}
+
+### 10. Send Text Message
+POST {{baseUrl}}/messages/send
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "phone": "6281234567890",
+  "message": "Hello from WhatsApp API!"
+}
+
+### ========================================
+### GROUP MANAGEMENT (Phase 8 - 12 endpoints)
+### ========================================
+
+### 11. Create Group
+# @name createGroup
+POST {{baseUrl}}/groups/create
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "name": "Test Group API",
+  "description": "Group created via API",
+  "participants": ["6281234567890", "6281234567891"]
+}
+
+### 12. Get Group Info
+@groupId = 120363123456789012@g.us
+GET {{baseUrl}}/groups/info?session_id={{sessionId}}&group_id={{groupId}}
+Authorization: Bearer {{token}}
+
+### 13. Update Group Name
+PUT {{baseUrl}}/groups/name
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "group_id": "{{groupId}}",
+  "name": "Updated Group Name"
+}
+
+### 14. Update Group Description
+PUT {{baseUrl}}/groups/description
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "group_id": "{{groupId}}",
+  "description": "This is the updated group description"
+}
+
+### 15. Update Group Picture
+PUT {{baseUrl}}/groups/picture
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="session_id"
+
+{{sessionId}}
+--boundary
+Content-Disposition: form-data; name="group_id"
+
+{{groupId}}
+--boundary
+Content-Disposition: form-data; name="image"; filename="group.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/image.jpg
+--boundary--
+
+### 16. Add Participants
+POST {{baseUrl}}/groups/participants/add
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "group_id": "{{groupId}}",
+  "participants": ["6281234567892", "6281234567893"]
+}
+
+### 17. Remove Participants
+POST {{baseUrl}}/groups/participants/remove
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "group_id": "{{groupId}}",
+  "participants": ["6281234567892"]
+}
+
+### 18. Promote to Admin
+POST {{baseUrl}}/groups/participants/promote
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "group_id": "{{groupId}}",
+  "participants": ["6281234567890"]
+}
+
+### 19. Demote Admin
+POST {{baseUrl}}/groups/participants/demote
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "group_id": "{{groupId}}",
+  "participants": ["6281234567890"]
+}
+
+### 20. Leave Group
+POST {{baseUrl}}/groups/leave
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "group_id": "{{groupId}}"
+}
+
+### 21. Get Invite Link
+GET {{baseUrl}}/groups/invite?session_id={{sessionId}}&group_id={{groupId}}
+Authorization: Bearer {{token}}
+
+### 22. Revoke Invite Link
+POST {{baseUrl}}/groups/invite/revoke
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "group_id": "{{groupId}}"
+}
+
+### ========================================
+### CONTACT MANAGEMENT (Phase 9 - 8 endpoints)
+### ========================================
+
+### 23. Get Contact List
+GET {{baseUrl}}/contacts/list?session_id={{sessionId}}
+Authorization: Bearer {{token}}
+
+### 24. Check Numbers Registered (Bulk, Max 100)
+POST {{baseUrl}}/contacts/check
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "numbers": ["6281234567890", "6281234567891", "6289876543210"]
+}
+
+### 25. Get Contact Info
+GET {{baseUrl}}/contacts/info?session_id={{sessionId}}&number=6281234567890
+Authorization: Bearer {{token}}
+
+### 26. Get Profile Picture (High Quality)
+GET {{baseUrl}}/contacts/profile-picture?session_id={{sessionId}}&number=6281234567890&quality=high
+Authorization: Bearer {{token}}
+
+### 27. Get Profile Picture (Low Quality/Preview)
+GET {{baseUrl}}/contacts/profile-picture?session_id={{sessionId}}&number=6281234567890&quality=low
+Authorization: Bearer {{token}}
+
+### 28. Update Own Profile Picture
+PUT {{baseUrl}}/contacts/profile-picture
+Authorization: Bearer {{token}}
+Content-Type: multipart/form-data; boundary=boundary
+
+--boundary
+Content-Disposition: form-data; name="session_id"
+
+{{sessionId}}
+--boundary
+Content-Disposition: form-data; name="image"; filename="profile.jpg"
+Content-Type: image/jpeg
+
+< ./path/to/profile.jpg
+--boundary--
+
+### 29. Get Profile Status (Own)
+GET {{baseUrl}}/contacts/status?session_id={{sessionId}}
+Authorization: Bearer {{token}}
+
+### 30. Get Profile Status (Contact)
+GET {{baseUrl}}/contacts/status?session_id={{sessionId}}&number=6281234567890
+Authorization: Bearer {{token}}
+
+### 31. Update Own Profile Status
+PUT {{baseUrl}}/contacts/status
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "status": "Available for work! 🚀"
+}
+
+### ========================================
+### WEBHOOK SYSTEM (Phase 10 - 6 endpoints)
+### ========================================
+
+### 32. Get Available Webhook Events
+GET {{baseUrl}}/webhooks/events
+Authorization: Bearer {{token}}
+
+### 33. Test Webhook URL
+POST {{baseUrl}}/webhooks/test
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "webhook_url": "https://your-domain.com/webhook",
+  "webhook_secret": "your-secret-key-here"
+}
+
+### 34. Update Webhook Configuration
+PUT {{baseUrl}}/webhooks/config
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "webhook_url": "https://your-domain.com/webhook",
+  "webhook_events": ["message.*", "connection.*"],
+  "generate_secret": true
+}
+
+### 35. Get Webhook Configuration
+GET {{baseUrl}}/webhooks/config?session_id={{sessionId}}
+Authorization: Bearer {{token}}
+
+### 36. Get Webhook Logs (All)
+GET {{baseUrl}}/webhooks/logs?limit=50
+Authorization: Bearer {{token}}
+
+### 37. Get Webhook Logs (By Session)
+GET {{baseUrl}}/webhooks/logs?session_id={{sessionId}}&limit=20
+Authorization: Bearer {{token}}
+
+### 38. Get Webhook Logs (Filtered)
+GET {{baseUrl}}/webhooks/logs?session_id={{sessionId}}&status=failed&event=message.received&limit=10
+Authorization: Bearer {{token}}
+
+### 39. Delete Webhook Configuration
+DELETE {{baseUrl}}/webhooks/config
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}"
+}
+
+### ========================================
+### MESSAGE QUEUE & SCHEDULING (Phase 11 - 7 endpoints)
+### ========================================
+
+### 40. Schedule a Single Message
+POST {{baseUrl}}/schedule/message
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "recipient": "6281234567890",
+  "message_type": "text",
+  "content": "This is a scheduled message!",
+  "scheduled_at": "2025-12-23T10:00:00.000Z"
+}
+
+### 41. Schedule Image Message
+POST {{baseUrl}}/schedule/message
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "recipient": "6281234567890",
+  "message_type": "image",
+  "content": "image",
+  "media_url": "https://example.com/image.jpg",
+  "caption": "Scheduled image with caption",
+  "scheduled_at": "2025-12-23T10:00:00.000Z"
+}
+
+### 42. Get All Scheduled Messages
+GET {{baseUrl}}/schedule/messages?limit=50
+Authorization: Bearer {{token}}
+
+### 43. Get Scheduled Messages by Session
+GET {{baseUrl}}/schedule/messages?session_id={{sessionId}}&status=pending
+Authorization: Bearer {{token}}
+
+### 44. Get Single Scheduled Message
+@scheduledMessageId = your-scheduled-message-id
+GET {{baseUrl}}/schedule/messages/{{scheduledMessageId}}
+Authorization: Bearer {{token}}
+
+### 45. Update Scheduled Message
+PUT {{baseUrl}}/schedule/messages/{{scheduledMessageId}}
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "content": "Updated scheduled message content",
+  "scheduled_at": "2025-12-24T10:00:00.000Z"
+}
+
+### 46. Cancel Scheduled Message
+DELETE {{baseUrl}}/schedule/messages/{{scheduledMessageId}}
+Authorization: Bearer {{token}}
+
+### 47. Bulk Schedule Messages
+POST {{baseUrl}}/schedule/bulk
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "messages": [
+    {
+      "recipient": "6281234567890",
+      "content": "Message 1 scheduled",
+      "scheduled_at": "2025-12-23T10:00:00.000Z"
+    },
+    {
+      "recipient": "6281234567891",
+      "content": "Message 2 scheduled",
+      "scheduled_at": "2025-12-23T10:05:00.000Z"
+    },
+    {
+      "recipient": "6281234567892",
+      "content": "Message 3 scheduled",
+      "scheduled_at": "2025-12-23T10:10:00.000Z"
+    }
+  ]
+}
+
+### 48. Send Bulk Messages Immediately
+POST {{baseUrl}}/schedule/send-bulk
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "recipients": ["6281234567890", "6281234567891", "6281234567892"],
+  "message_type": "text",
+  "content": "Bulk message to all recipients!",
+  "delay": 1000
+}
+
+### 49. Send Bulk Image Messages
+POST {{baseUrl}}/schedule/send-bulk
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "session_id": "{{sessionId}}",
+  "recipients": ["6281234567890", "6281234567891"],
+  "message_type": "image",
+  "content": "image",
+  "media_url": "https://example.com/promo.jpg",
+  "caption": "Check out our latest promo!",
+  "delay": 2000
+}
+
+###############################################
+# PHASE 12: ADMIN PANEL (Endpoints 50-60)
+###############################################
+
+### 50. Admin - Get Dashboard Stats
+GET {{baseUrl}}/admin/dashboard
+Authorization: Bearer {{token}}
+
+### 51. Admin - Get System Metrics
+GET {{baseUrl}}/admin/metrics?period=7d
+Authorization: Bearer {{token}}
+
+### 52. Admin - List All Users
+GET {{baseUrl}}/admin/users?page=1&limit=20
+Authorization: Bearer {{token}}
+
+### 53. Admin - Search Users
+GET {{baseUrl}}/admin/users?search=john&status=active
+Authorization: Bearer {{token}}
+
+### 54. Admin - Get User Details
+GET {{baseUrl}}/admin/users/1
+Authorization: Bearer {{token}}
+
+### 55. Admin - Update User
+PUT {{baseUrl}}/admin/users/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "status": "active",
+  "role": "user",
+  "email_verified": true
+}
+
+### 56. Admin - Delete User
+DELETE {{baseUrl}}/admin/users/2
+Authorization: Bearer {{token}}
+
+### 57. Admin - List All Sessions
+GET {{baseUrl}}/admin/sessions?page=1&status=connected
+Authorization: Bearer {{token}}
+
+### 58. Admin - Get Audit Logs
+GET {{baseUrl}}/admin/audit-logs?page=1&limit=50
+Authorization: Bearer {{token}}
+
+### 59. Admin - Manage Subscription
+POST {{baseUrl}}/admin/subscriptions
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "user_id": 2,
+  "plan_id": "premium",
+  "status": "active",
+  "expires_at": "2026-12-22T00:00:00.000Z"
+}
+
+### 60. Admin - Get Plans
+GET {{baseUrl}}/admin/plans
+Authorization: Bearer {{token}}
+
+### 61. Admin - Create/Update Plan
+POST {{baseUrl}}/admin/plans
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "Enterprise",
+  "description": "For large businesses with high volume",
+  "price": 99.99,
+  "features": {
+    "max_sessions": 50,
+    "max_messages_per_day": 10000,
+    "webhook_support": true,
+    "priority_support": true,
+    "dedicated_server": true
+  },
+  "limits": {
+    "sessions": 50,
+    "messages_daily": 10000,
+    "templates": 100,
+    "contacts": 100000
+  },
+  "is_active": true
+}
+
+### 62. Admin - Suspend User
+POST {{baseUrl}}/admin/users/2/suspend
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "reason": "Violation of terms of service"
+}
+
+### 63. Admin - Unsuspend User
+POST {{baseUrl}}/admin/users/2/unsuspend
+Authorization: Bearer {{token}}
+
+### 64. Admin - Force Disconnect Session
+POST {{baseUrl}}/admin/sessions/1/disconnect
+Authorization: Bearer {{token}}
+
+### 65. Admin - Get System Health
+GET {{baseUrl}}/admin/health
+Authorization: Bearer {{token}}
+
+###############################################
+# PHASE 15: BILLING & PAYMENTS (Endpoints 66-80)
+###############################################
+
+### 66. Create Checkout Session
+POST {{baseUrl}}/billing/checkout
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "planId": "plan-uuid-here",
+  "successUrl": "http://localhost:3000/success",
+  "cancelUrl": "http://localhost:3000/cancel"
+}
+
+### 67. Create Customer Portal Session
+POST {{baseUrl}}/billing/portal
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "returnUrl": "http://localhost:3000/billing"
+}
+
+### 68. Get Current Subscription
+GET {{baseUrl}}/billing/subscription
+Authorization: Bearer {{token}}
+
+### 69. Cancel Subscription (at period end)
+POST {{baseUrl}}/billing/subscription/cancel
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "immediate": false
+}
+
+### 70. Cancel Subscription (immediately)
+POST {{baseUrl}}/billing/subscription/cancel
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "immediate": true
+}
+
+### 71. Resume Cancelled Subscription
+POST {{baseUrl}}/billing/subscription/resume
+Authorization: Bearer {{token}}
+
+### 72. Change Subscription Plan
+POST {{baseUrl}}/billing/subscription/change
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "newPlanId": "new-plan-uuid-here"
+}
+
+### 73. Get Invoices
+GET {{baseUrl}}/billing/invoices?page=1&limit=10
+Authorization: Bearer {{token}}
+
+### 74. Get Upcoming Invoice
+GET {{baseUrl}}/billing/invoices/upcoming
+Authorization: Bearer {{token}}
+
+### 75. Get Payment Methods
+GET {{baseUrl}}/billing/payment-methods
+Authorization: Bearer {{token}}
+
+### 76. Set Default Payment Method
+PUT {{baseUrl}}/billing/payment-methods/pm_1234567890/default
+Authorization: Bearer {{token}}
+
+### 77. Delete Payment Method
+DELETE {{baseUrl}}/billing/payment-methods/pm_1234567890
+Authorization: Bearer {{token}}
+
+### 78. Get Transactions
+GET {{baseUrl}}/billing/transactions?page=1&limit=10
+Authorization: Bearer {{token}}
+
+### 79. Admin - Sync Plans to Stripe
+POST {{baseUrl}}/billing/admin/sync-plans
+Authorization: Bearer {{token}}
+
+### 80. Admin - Get Billing Overview
+GET {{baseUrl}}/billing/admin/overview
+Authorization: Bearer {{token}}
+
+###############################################
+# PHASE 16: ANALYTICS DASHBOARD (Endpoints 81-92)
+###############################################
+
+### 81. Get User Dashboard
+GET {{baseUrl}}/analytics/dashboard
+Authorization: Bearer {{token}}
+
+### 82. Get Message Statistics
+GET {{baseUrl}}/analytics/messages?startDate=2025-11-01&endDate=2025-12-22
+Authorization: Bearer {{token}}
+
+### 83. Get Message Statistics by Session
+GET {{baseUrl}}/analytics/messages?sessionId=my-session-id
+Authorization: Bearer {{token}}
+
+### 84. Get API Usage Statistics
+GET {{baseUrl}}/analytics/api?startDate=2025-11-01&endDate=2025-12-22
+Authorization: Bearer {{token}}
+
+### 85. Get Session Statistics
+GET {{baseUrl}}/analytics/sessions
+Authorization: Bearer {{token}}
+
+### 86. Get Recent Activity
+GET {{baseUrl}}/analytics/activity?limit=50
+Authorization: Bearer {{token}}
+
+### 87. Get Activity by Event Type
+GET {{baseUrl}}/analytics/activity?eventType=message_sent&limit=20
+Authorization: Bearer {{token}}
+
+### 88. Export Analytics (JSON)
+GET {{baseUrl}}/analytics/export?type=messages&startDate=2025-12-01&endDate=2025-12-22&format=json
+Authorization: Bearer {{token}}
+
+### 89. Export Analytics (CSV)
+GET {{baseUrl}}/analytics/export?type=messages&startDate=2025-12-01&endDate=2025-12-22&format=csv
+Authorization: Bearer {{token}}
+
+### 90. Get Realtime Stats
+GET {{baseUrl}}/analytics/realtime
+Authorization: Bearer {{token}}
+
+### 91. Admin - Get Platform Dashboard
+GET {{baseUrl}}/analytics/admin/dashboard
+Authorization: Bearer {{token}}
+
+### 92. Admin - Get Platform Message Stats
+GET {{baseUrl}}/analytics/admin/messages?startDate=2025-11-01&endDate=2025-12-22
+Authorization: Bearer {{token}}
+
+### 93. Admin - Get User Analytics
+GET {{baseUrl}}/analytics/admin/users/user-uuid-here
+Authorization: Bearer {{token}}
+
+### 94. Admin - Cleanup Old Analytics
+POST {{baseUrl}}/analytics/admin/cleanup
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "daysToKeep": 90
+}
+
+### 95. Admin - Get System Metrics
+GET {{baseUrl}}/analytics/admin/system
+Authorization: Bearer {{token}}
+
+###############################################
+# SWAGGER DOCUMENTATION
+###############################################
+
+### 96. View Swagger UI (Open in Browser)
+# Open http://localhost:3000/api/docs in your browser
+
+### 97. Get Swagger JSON Spec
+GET http://localhost:3000/api/docs.json
+
+###############################################
+# TESTING COMMANDS
+###############################################
+
+# Run all tests:
+# npm test
+
+# Run unit tests:
+# npm run test:unit
+
+# Run API tests:
+# npm run test:api
+
+# Docker commands:
+# npm run docker:dev   - Start development containers
+# npm run docker:prod  - Start production containers
+# npm run docker:logs  - View container logs
+# npm run docker:stop  - Stop containers
+
+# PM2 commands:
+# npm run pm2:start   - Start with PM2
+# npm run pm2:logs    - View PM2 logs
+# npm run pm2:restart - Restart application
+
+
+
+
