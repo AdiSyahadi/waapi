@@ -1,8 +1,22 @@
+console.log('🔍 [messageController] Loading db models...');
 const db = require('../models');
+console.log('✅ [messageController] Models loaded');
+
+console.log('🔍 [messageController] Loading sequelize Op...');
 const { Op } = require('sequelize');
+console.log('✅ [messageController] Sequelize Op loaded');
+
+console.log('🔍 [messageController] Loading whatsappService...');
 const whatsappService = require('../services/whatsappService');
+console.log('✅ [messageController] whatsappService loaded');
+
+console.log('🔍 [messageController] Loading messageService...');
 const messageService = require('../services/messageService');
+console.log('✅ [messageController] messageService loaded');
+
+console.log('🔍 [messageController] Loading upload config...');
 const { upload } = require('../config/upload');
+console.log('✅ [messageController] upload config loaded');
 
 /**
  * Helper to find session by ID (supports both id UUID and session_id)
