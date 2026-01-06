@@ -1,4 +1,4 @@
-const { Queue, Worker, QueueScheduler } = require('bullmq');
+const { Queue, Worker } = require('bullmq');
 const { getRedisClient } = require('./redis');
 require('dotenv').config();
 
@@ -17,10 +17,6 @@ let messageQueue = null;
 let webhookQueue = null;
 let sessionQueue = null;
 let scheduledMessageQueue = null;
-let messageScheduler = null;
-let webhookScheduler = null;
-let sessionScheduler = null;
-let scheduledScheduler = null;
 
 // Try to initialize queues only if Redis is enabled
 if (REDIS_ENABLED) {
@@ -29,11 +25,8 @@ if (REDIS_ENABLED) {
     webhookQueue = new Queue('webhook-delivery', { connection });
     sessionQueue = new Queue('session-management', { connection });
     scheduledMessageQueue = new Queue('scheduled-messages', { connection });
-    messageScheduler = new QueueScheduler('whatsapp-messages', { connection });
-    webhookScheduler = new QueueScheduler('webhook-delivery', { connection });
-    sessionScheduler = new QueueScheduler('session-management', { connection });
-    scheduledScheduler = new QueueScheduler('scheduled-messages', { connection });
-    console.log('BullMQ queues initialized successfully');
+    // Note: QueueScheduler is deprecated in BullMQ v5+ and no longer needed
+    console.log('✅ BullMQ queues initialized successfully');
   } catch (error) {
     console.warn('BullMQ queue initialization failed:', error.message);
   }
