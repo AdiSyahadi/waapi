@@ -73,6 +73,7 @@ const checkMessageLimit = async (req, res, next) => {
   console.log('[checkMessageLimit] START - User:', req.user?.id);
   try {
     const userId = req.user.id;
+    console.log('[checkMessageLimit] Querying subscription for user:', userId);
 
     // Get user's active subscription
     const subscription = await db.Subscription.findOne({
@@ -85,16 +86,19 @@ const checkMessageLimit = async (req, res, next) => {
         as: 'plan'
       }]
     });
+    console.log('[checkMessageLimit] Subscription found:', subscription ? 'YES' : 'NO');
 
     // If no active subscription, use Free plan limits
     let messageLimit = 100; // Free plan default: 100 messages per day
     if (subscription && subscription.plan) {
       messageLimit = subscription.plan.max_messages_per_day || 100;
     }
+    console.log('[checkMessageLimit] Message limit:', messageLimit);
 
     // Count messages sent today
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    console.log('[checkMessageLimit] Counting messages from:', today.toISOString());
 
     const todayMessagesCount = await db.Message.count({
       where: {
@@ -112,6 +116,7 @@ const checkMessageLimit = async (req, res, next) => {
         attributes: []
       }]
     });
+    console.log('[checkMessageLimit] Messages today:', todayMessagesCount);
 
     // Check if limit reached
     if (todayMessagesCount >= messageLimit) {
