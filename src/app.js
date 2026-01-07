@@ -41,10 +41,9 @@ app.use(morgan('combined', { stream: logger.stream }));
 const { authenticate } = require('./middleware/auth');
 const { requireAdmin } = require('./middleware/permissions');
 
-// Swagger API Documentation - Public (User) using Router
-const publicDocsRouter = express.Router();
-publicDocsRouter.use(swaggerUi.serve);
-publicDocsRouter.get('/', swaggerUi.setup(swaggerPublicSpec, {
+// Swagger API Documentation - Public (User) - Direct mount without shared serve
+app.use('/api/docs', swaggerUi.serve);
+app.get('/api/docs', swaggerUi.setup(swaggerPublicSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API Documentation',
   swaggerOptions: {
@@ -54,13 +53,11 @@ publicDocsRouter.get('/', swaggerUi.setup(swaggerPublicSpec, {
     showExtensions: true
   }
 }));
-app.use('/api/docs', publicDocsRouter);
 
-// Swagger Admin Documentation - Admin Only (Protected) using Router
-const adminDocsRouter = express.Router();
-// Fix: Apply auth middleware only to the setup route, not to serve (static files)
-adminDocsRouter.use(swaggerUi.serve);
-adminDocsRouter.get('/', authenticate, requireAdmin, swaggerUi.setup(swaggerAdminSpec, {
+// Swagger Admin Documentation - Admin Only (Protected) - Use serveFiles for separate instance
+const swaggerUiAssetPath = require("swagger-ui-dist").getAbsoluteFSPath();
+app.use('/api/admin/docs', express.static(swaggerUiAssetPath));
+app.get('/api/admin/docs', authenticate, requireAdmin, swaggerUi.setup(swaggerAdminSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API - Admin Documentation',
   swaggerOptions: {
@@ -70,7 +67,6 @@ adminDocsRouter.get('/', authenticate, requireAdmin, swaggerUi.setup(swaggerAdmi
     showExtensions: true
   }
 }));
-app.use('/api/admin/docs', adminDocsRouter);
 
 // Swagger JSON endpoints
 app.get('/api/docs.json', (req, res) => {
