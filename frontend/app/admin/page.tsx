@@ -15,7 +15,7 @@ export default function AdminPage() {
 
   const fetchStats = async () => {
     try {
-      const { data } = await adminAPI.getStats();
+      const { data } = await adminAPI.getDashboard();
       setStats(data.data);
     } catch (error) {
       console.error('Failed to fetch admin stats');
