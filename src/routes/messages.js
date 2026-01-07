@@ -76,40 +76,53 @@ router.use(requireVerifiedEmail);
 
 // Send messages
 router.post('/:sessionId/send/text', checkMessageLimit, sendTextValidation, validate, messageController.sendTextMessage);
-router.post('/:sessionId/send/media', checkMessageLimit, (req, res, next) => {
-  // Save type before multer processes
-  const typeBeforeUpload = req.body.type;
-  console.log('[Route] send/media hit, type before upload:', typeBeforeUpload);
-  
-  upload.single('file')(req, res, (err) => {
-    if (err) {
-      console.error('[Multer Error]', err.message);
-      return res.status(400).json({
-        success: false,
-        message: 'File upload error',
-        error: err.message
-      });
-    }
-    console.log('[Route] Upload success, file:', req.file ? req.file.filename : 'NO FILE');
-    
-    // Restore type after multer (multer may clear body fields)
-    if (typeBeforeUpload) {
-      req.body.type = typeBeforeUpload;
-    } else if (req.file) {
-      // Detect from mimetype if not provided
-      if (req.file.mimetype.startsWith('image/')) req.body.type = 'image';
-      else if (req.file.mimetype.startsWith('video/')) req.body.type = 'video';
-      else if (req.file.mimetype.startsWith('audio/')) req.body.type = 'audio';
-      else req.body.type = 'document';
-    }
-    console.log('[Route] Type after upload:', req.body.type);
+router.post('/:sessionId/send/media', 
+  (req, res, next) => {
+    console.log('[Route Wrapper 1] BEFORE checkMessageLimit');
     next();
-  });
-}, (req, res, next) => {
-  const type = req.body.type || 'image';
-  console.log('[Route] Validating file type:', type);
-  return validateFile(type)(req, res, next);
-}, sendMediaValidation, validate, messageController.sendMediaMessage);
+  },
+  checkMessageLimit,
+  (req, res, next) => {
+    console.log('[Route Wrapper 2] AFTER checkMessageLimit, BEFORE multer');
+    // Save type before multer processes
+    const typeBeforeUpload = req.body.type;
+    console.log('[Route] send/media hit, type before upload:', typeBeforeUpload);
+
+    upload.single('file')(req, res, (err) => {
+      if (err) {
+        console.error('[Multer Error]', err.message);
+        return res.status(400).json({
+          success: false,
+          message: 'File upload error',
+          error: err.message
+        });
+      }
+      console.log('[Route] Upload success, file:', req.file ? req.file.filename : 'NO FILE');
+
+      // Restore type after multer (multer may clear body fields)
+      if (typeBeforeUpload) {
+        req.body.type = typeBeforeUpload;
+      } else if (req.file) {
+        // Detect from mimetype if not provided
+        if (req.file.mimetype.startsWith('image/')) req.body.type = 'image';
+        else if (req.file.mimetype.startsWith('video/')) req.body.type = 'video';
+        else if (req.file.mimetype.startsWith('audio/')) req.body.type = 'audio';
+        else req.body.type = 'document';
+      }
+      console.log('[Route] Type after upload:', req.body.type);
+      next();
+    });
+  }, 
+  (req, res, next) => {
+    console.log('[Route Wrapper 3] AFTER multer, BEFORE validateFile');
+    const type = req.body.type || 'image';
+    console.log('[Route] Validating file type:', type);
+    return validateFile(type)(req, res, next);
+  }, 
+  sendMediaValidation, 
+  validate, 
+  messageController.sendMediaMessage
+);
 router.post('/:sessionId/send/location', checkMessageLimit, sendLocationValidation, validate, messageController.sendLocation);
 router.post('/:sessionId/send/contact', checkMessageLimit, sendContactValidation, validate, messageController.sendContact);
 router.post('/:sessionId/send/button', checkMessageLimit, sendButtonValidation, validate, messageController.sendButton);
