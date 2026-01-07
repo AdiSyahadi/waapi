@@ -51,8 +51,9 @@ app.get('/api/docs', swaggerUi.setup(swaggerSpec, {
 }));
 
 // Swagger Admin Documentation - Admin Only
+const { authenticate } = require('./middleware/auth');
 const { requireAdmin } = require('./middleware/permissions');
-app.get('/api/admin/docs', requireAdmin, swaggerUi.setup(swaggerAdminSpec, {
+app.get('/api/admin/docs', authenticate, requireAdmin, swaggerUi.setup(swaggerAdminSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API - Admin Documentation',
   swaggerOptions: {
@@ -69,7 +70,7 @@ app.get('/api/docs.json', (req, res) => {
   res.send(swaggerSpec);
 });
 
-app.get('/api/admin/docs.json', requireAdmin, (req, res) => {
+app.get('/api/admin/docs.json', authenticate, requireAdmin, (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerAdminSpec);
 });

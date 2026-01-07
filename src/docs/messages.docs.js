@@ -511,6 +511,47 @@
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         description: Message not found
+ *   put:
+ *     summary: Edit a message
+ *     tags: [Messages]
+ *     security:
+ *       - apiKeyAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: WhatsApp session ID (UUID)
+ *         example: "266cdcce-97a1-4d70-a6c5-b561b90acdfd"
+ *       - in: path
+ *         name: messageId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Message ID to edit
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - new_text
+ *             properties:
+ *               new_text:
+ *                 type: string
+ *                 description: New message text
+ *     responses:
+ *       200:
+ *         description: Message edited successfully
+ *       400:
+ *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       404:
+ *         description: Message not found
  *
  * /api/v1/messages/{sessionId}/messages:
  *   get:
@@ -607,49 +648,6 @@
  *         $ref: '#/components/responses/ValidationError'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
- *
- * /api/v1/messages/{sessionId}/message/{messageId}:
- *   put:
- *     summary: Edit a message
- *     tags: [Messages]
- *     security:
- *       - apiKeyAuth: []
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *         description: WhatsApp session ID (UUID)
- *         example: "266cdcce-97a1-4d70-a6c5-b561b90acdfd"
- *       - in: path
- *         name: messageId
- *         required: true
- *         schema:
- *           type: string
- *         description: Message ID to edit
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - new_text
- *             properties:
- *               new_text:
- *                 type: string
- *                 description: New message text
- *     responses:
- *       200:
- *         description: Message edited successfully
- *       400:
- *         $ref: '#/components/responses/ValidationError'
- *       401:
- *         $ref: '#/components/responses/Unauthorized'
- *       404:
- *         description: Message not found
  *
  * /api/v1/messages/{sessionId}/check-number:
  *   get:
