@@ -78,6 +78,7 @@ export default function AdminLayout({
             >
               Users
             </Link>
+            {/* TODO: Create these pages later
             <Link
               href="/admin/analytics"
               className="text-gray-700 hover:text-primary-600 font-medium transition"
@@ -90,6 +91,7 @@ export default function AdminLayout({
             >
               System
             </Link>
+            */}
           </nav>
         </div>
       </div>
