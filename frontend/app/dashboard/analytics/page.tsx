@@ -106,7 +106,9 @@ export default function AnalyticsPage() {
             {messageStats?.totals?.sent?.toLocaleString() || 0}
           </p>
           <p className="text-sm text-gray-600 mt-1">
-            {messageStats?.totals?.delivered || 0} delivered
+            {messageStats?.totals?.sent > 0 
+              ? `${messageStats?.totals?.delivered || 0} delivered`
+              : 'No messages sent yet'}
           </p>
         </div>
         
@@ -118,7 +120,7 @@ export default function AnalyticsPage() {
           <p className="text-3xl font-bold text-gray-900">
             {messageStats?.deliveryRate || 0}%
           </p>
-          <p className="text-sm text-green-600 mt-1">
+          <p className="text-sm text-gray-600 mt-1">
             {messageStats?.totals?.failed || 0} failed
           </p>
         </div>
@@ -146,6 +148,9 @@ export default function AnalyticsPage() {
           </p>
           <p className="text-sm text-gray-600 mt-1">
             {apiStats?.successRate || 0}% success rate
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Includes dashboard & API requests
           </p>
         </div>
       </div>

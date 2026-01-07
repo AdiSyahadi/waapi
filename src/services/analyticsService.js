@@ -145,8 +145,38 @@ class AnalyticsService {
 
     // Fallback: If no analytics data, get from messages table directly
     if (!totals || parseInt(totals?.totalSent || 0) === 0) {
+      console.log('[Analytics Fallback] Querying messages table directly for userId:', userId);
+      
+      // Get user's sessions first
+      const userSessions = await Session.findAll({
+        where: { userId },
+        attributes: ['id'],
+        raw: true
+      });
+      
+      const sessionIds = userSessions.map(s => s.id);
+      console.log('[Analytics Fallback] Found', sessionIds.length, 'sessions for user');
+      
+      if (sessionIds.length === 0) {
+        console.log('[Analytics Fallback] No sessions found, returning empty data');
+        return {
+          daily: [],
+          totals: {
+            sent: 0,
+            delivered: 0,
+            read: 0,
+            failed: 0,
+            received: 0,
+            media: 0,
+            broadcasts: 0
+          },
+          deliveryRate: 0,
+          readRate: 0
+        };
+      }
+
       const messageWhere = {
-        user_id: userId,
+        session_id: sessionIds,
         created_at: { [Op.between]: [new Date(startDate), new Date(endDate)] }
       };
 
@@ -154,16 +184,17 @@ class AnalyticsService {
         messageWhere.session_id = sessionId;
       }
 
-      const messagesCount = await Message.count({
-        where: messageWhere,
-        col: 'status',
-        group: ['status']
-      });
-
       const totalMessages = await Message.count({ where: messageWhere });
       const deliveredMessages = await Message.count({ where: { ...messageWhere, status: 'delivered' } });
       const readMessages = await Message.count({ where: { ...messageWhere, status: 'read' } });
       const failedMessages = await Message.count({ where: { ...messageWhere, status: 'failed' } });
+
+      console.log('[Analytics Fallback] Found messages:', {
+        total: totalMessages,
+        delivered: deliveredMessages,
+        read: readMessages,
+        failed: failedMessages
+      });
 
       return {
         daily: [],
