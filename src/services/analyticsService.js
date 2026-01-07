@@ -387,24 +387,28 @@ class AnalyticsService {
         where: { session_id: sessionIds },
         order: [['created_at', 'DESC']],
         limit: limit,
-        attributes: ['id', 'type', 'status', 'created_at', 'remote_jid']
+        attributes: ['id', 'type', 'status', 'created_at', 'remote_jid', 'createdAt', 'updatedAt']
       });
 
       if (recentMessages.length === 0) {
         return [{
           event: 'No messages yet',
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
           status: 'info',
           details: { message: 'Start sending messages to see activity here' }
         }];
       }
 
-      return recentMessages.map(msg => ({
-        event: `Message ${msg.type || 'text'} sent to ${msg.remote_jid}`,
-        timestamp: msg.created_at,
-        status: msg.status === 'sent' || msg.status === 'delivered' || msg.status === 'read' ? 'success' : 'failed',
-        details: { messageId: msg.id, type: msg.type }
-      }));
+      return recentMessages.map(msg => {
+        // Try multiple timestamp fields
+        const timestamp = msg.created_at || msg.createdAt || msg.updatedAt || new Date();
+        return {
+          event: `Message ${msg.type || 'text'} sent to ${msg.remote_jid}`,
+          timestamp: timestamp instanceof Date ? timestamp.toISOString() : new Date(timestamp).toISOString(),
+          status: msg.status === 'sent' || msg.status === 'delivered' || msg.status === 'read' ? 'success' : 'failed',
+          details: { messageId: msg.id, type: msg.type }
+        };
+      });
     } catch (error) {
       console.error('[getRecentActivity] Error:', error);
       return [{
