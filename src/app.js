@@ -37,9 +37,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: logger.stream }));
 
+// Import auth middleware
+const { authenticate } = require('./middleware/auth');
+const { requireAdmin } = require('./middleware/permissions');
+
 // Swagger API Documentation - Public (User)
-app.use('/api/docs', swaggerUi.serve);
-app.get('/api/docs', swaggerUi.setup(swaggerSpec, {
+const swaggerUiPublic = swaggerUi.serveFiles(swaggerSpec, {});
+app.get('/api/docs', (req, res, next) => {
+  swaggerUiPublic(req, res, next);
+}, swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API Documentation',
   swaggerOptions: {
@@ -50,10 +56,11 @@ app.get('/api/docs', swaggerUi.setup(swaggerSpec, {
   }
 }));
 
-// Swagger Admin Documentation - Admin Only
-const { authenticate } = require('./middleware/auth');
-const { requireAdmin } = require('./middleware/permissions');
-app.get('/api/admin/docs', authenticate, requireAdmin, swaggerUi.setup(swaggerAdminSpec, {
+// Swagger Admin Documentation - Admin Only (Protected)
+const swaggerUiAdmin = swaggerUi.serveFiles(swaggerAdminSpec, {});
+app.get('/api/admin/docs', authenticate, requireAdmin, (req, res, next) => {
+  swaggerUiAdmin(req, res, next);
+}, swaggerUi.setup(swaggerAdminSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API - Admin Documentation',
   swaggerOptions: {
