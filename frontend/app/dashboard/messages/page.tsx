@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Send, Image, FileText, Users, MessageCircle } from 'lucide-react';
 import { messagesAPI, sessionsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
@@ -11,7 +11,7 @@ export default function MessagesPage() {
   const [selectedSession, setSelectedSession] = useState('');
   const [messageType, setMessageType] = useState<'text' | 'media'>('text');
   const [loading, setLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [fileInputKey, setFileInputKey] = useState(0); // Key to force remount file input
 
   const [formData, setFormData] = useState({
     to: '',
@@ -83,10 +83,8 @@ export default function MessagesPage() {
       await messagesAPI.sendMedia(selectedSession, data);
       toast.success('Media sent successfully!');
       setFormData({ to: '', message: '', file: null });
-      // Reset file input element
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      // Force remount file input by changing key
+      setFileInputKey(prev => prev + 1);
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to send media');
     } finally {
@@ -195,7 +193,7 @@ export default function MessagesPage() {
                     </label>
                     <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary-400 transition">
                       <input
-                        ref={fileInputRef}
+                        key={fileInputKey}
                         type="file"
                         onChange={(e) => setFormData({ ...formData, file: e.target.files?.[0] || null })}
                         className="hidden"
