@@ -132,7 +132,7 @@ const getAllUsers = async (req, res) => {
         exclude: ['password', 'two_factor_secret'],
         include: [
           [db.sequelize.literal('(SELECT COUNT(*) FROM sessions WHERE sessions.user_id = User.id)'), 'sessionsCount'],
-          [db.sequelize.literal('(SELECT COUNT(*) FROM messages WHERE messages.user_id = User.id)'), 'messagesCount']
+          [db.sequelize.literal('(SELECT COUNT(*) FROM messages WHERE messages.session_id IN (SELECT id FROM sessions WHERE sessions.user_id = User.id))'), 'messagesCount']
         ]
       },
       include: [
