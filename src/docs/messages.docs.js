@@ -59,7 +59,6 @@
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         description: Session not found
- */
  *
  * /api/v1/messages/{sessionId}/send/media:
  *   post:
@@ -130,9 +129,6 @@
  *         $ref: '#/components/responses/Unauthorized'
  *       404:
  *         description: Session not found
-
-
-
  *
  * /api/v1/messages/{sessionId}/send/location:
  *   post:
@@ -241,7 +237,6 @@
  *         $ref: '#/components/responses/ValidationError'
  *       401:
  *         $ref: '#/components/responses/Unauthorized'
-
  *
  * /api/v1/messages/{sessionId}/send/button:
  *   post:
