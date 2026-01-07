@@ -16,6 +16,8 @@ export default function DashboardPage() {
   const fetchDashboard = async () => {
     try {
       const { data } = await analyticsAPI.getDashboard();
+      console.log('[Dashboard] API Response:', data.data);
+      console.log('[Dashboard] Recent Activity:', data.data?.recentActivity);
       setStats(data.data);
     } catch (error) {
       console.error('Failed to fetch dashboard:', error);
@@ -75,21 +77,33 @@ export default function DashboardPage() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
           <div className="space-y-4">
             {stats?.recentActivity && stats.recentActivity.length > 0 ? (
-              stats.recentActivity.map((activity: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">{activity.event}</p>
-                    <p className="text-xs text-gray-500">{new Date(activity.timestamp).toLocaleString()}</p>
+              stats.recentActivity.map((activity: any, idx: number) => {
+                const timestamp = activity.timestamp || activity.created_at || activity.createdAt;
+                const dateStr = timestamp ? new Date(timestamp).toLocaleString('en-US', {
+                  month: 'short',
+                  day: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit'
+                }) : 'Just now';
+                
+                return (
+                  <div key={idx} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{activity.event}</p>
+                      <p className="text-xs text-gray-500">{dateStr}</p>
+                    </div>
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      activity.status === 'success' 
+                        ? 'bg-green-100 text-green-700' 
+                        : activity.status === 'failed'
+                        ? 'bg-red-100 text-red-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {activity.status}
+                    </span>
                   </div>
-                  <span className={`px-2 py-1 text-xs rounded-full ${
-                    activity.status === 'success' 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-red-100 text-red-700'
-                  }`}>
-                    {activity.status}
-                  </span>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div className="text-center py-8">
                 <p className="text-gray-500 text-sm">No recent activity</p>
