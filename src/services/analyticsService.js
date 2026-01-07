@@ -363,20 +363,57 @@ class AnalyticsService {
       }));
     }
 
-    // Fallback: Get recent messages as activity
-    const recentMessages = await Message.findAll({
-      where: { user_id: userId },
-      order: [['created_at', 'DESC']],
-      limit: limit,
-      attributes: ['id', 'message_type', 'status', 'created_at', 'to_number']
-    });
+    // Fallback: Get recent messages as activity via session
+    try {
+      // Get user's sessions first
+      const userSessions = await Session.findAll({
+        where: { user_id: userId },
+        attributes: ['id'],
+        raw: true
+      });
+      
+      const sessionIds = userSessions.map(s => s.id);
+      
+      if (sessionIds.length === 0) {
+        return [{
+          event: 'No activity yet',
+          timestamp: new Date(),
+          status: 'info',
+          details: { message: 'Start sending messages to see activity here' }
+        }];
+      }
 
-    return recentMessages.map(msg => ({
-      event: `Message ${msg.message_type} sent to ${msg.to_number}`,
-      timestamp: msg.created_at,
-      status: msg.status === 'sent' || msg.status === 'delivered' ? 'success' : 'failed',
-      details: { messageId: msg.id, type: msg.message_type }
-    }));
+      const recentMessages = await Message.findAll({
+        where: { session_id: sessionIds },
+        order: [['created_at', 'DESC']],
+        limit: limit,
+        attributes: ['id', 'type', 'status', 'created_at', 'remote_jid']
+      });
+
+      if (recentMessages.length === 0) {
+        return [{
+          event: 'No messages yet',
+          timestamp: new Date(),
+          status: 'info',
+          details: { message: 'Start sending messages to see activity here' }
+        }];
+      }
+
+      return recentMessages.map(msg => ({
+        event: `Message ${msg.type || 'text'} sent to ${msg.remote_jid}`,
+        timestamp: msg.created_at,
+        status: msg.status === 'sent' || msg.status === 'delivered' || msg.status === 'read' ? 'success' : 'failed',
+        details: { messageId: msg.id, type: msg.type }
+      }));
+    } catch (error) {
+      console.error('[getRecentActivity] Error:', error);
+      return [{
+        event: 'Error loading activity',
+        timestamp: new Date(),
+        status: 'error',
+        details: { error: error.message }
+      }];
+    }
   }
 
   /**
