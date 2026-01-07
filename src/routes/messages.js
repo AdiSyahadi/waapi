@@ -84,9 +84,7 @@ router.post('/:sessionId/send/media',
   checkMessageLimit,
   (req, res, next) => {
     console.log('[Route Wrapper 2] AFTER checkMessageLimit, BEFORE multer');
-    // Save type before multer processes
-    const typeBeforeUpload = req.body.type;
-    console.log('[Route] send/media hit, type before upload:', typeBeforeUpload);
+    console.log('[Route] send/media hit, starting file upload');
 
     upload.single('file')(req, res, (err) => {
       if (err) {
@@ -99,11 +97,8 @@ router.post('/:sessionId/send/media',
       }
       console.log('[Route] Upload success, file:', req.file ? req.file.filename : 'NO FILE');
 
-      // Restore type after multer (multer may clear body fields)
-      if (typeBeforeUpload) {
-        req.body.type = typeBeforeUpload;
-      } else if (req.file) {
-        // Detect from mimetype if not provided
+      // Set type from file mimetype if not provided in body
+      if (!req.body.type && req.file) {
         if (req.file.mimetype.startsWith('image/')) req.body.type = 'image';
         else if (req.file.mimetype.startsWith('video/')) req.body.type = 'video';
         else if (req.file.mimetype.startsWith('audio/')) req.body.type = 'audio';
