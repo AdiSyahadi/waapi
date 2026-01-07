@@ -27,8 +27,8 @@
  *             properties:
  *               phone:
  *                 type: string
- *                 description: Phone number with country code (no + or spaces)
- *                 example: "6281234567890"
+ *                 description: "Phone number (flexible format: +6281234567890, 6281234567890, or 081234567890)"
+ *                 example: "081234567890"
  *               message:
  *                 type: string
  *                 example: Hello, this is a test message!

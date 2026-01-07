@@ -134,12 +134,16 @@ const sendLocation = async (sock, remoteJid, latitude, longitude, name = '', add
 
 /**
  * Format phone number to WhatsApp JID
+ * Supports multiple formats:
+ * - 082119499306 (local)
+ * - 6282119499306 (with country code)
+ * - +6282119499306 (with + and country code)
  */
 const formatPhoneNumber = (phone) => {
-  // Remove all non-numeric characters
+  // Remove all non-numeric characters (including +, -, spaces, etc)
   let cleaned = phone.replace(/\D/g, '');
   
-  // Remove leading zeros
+  // Remove leading zeros (e.g., 082119499306 → 82119499306)
   cleaned = cleaned.replace(/^0+/, '');
   
   // Add country code if not present (default to Indonesia +62)
