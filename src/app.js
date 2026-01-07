@@ -58,9 +58,9 @@ app.use('/api/docs', publicDocsRouter);
 
 // Swagger Admin Documentation - Admin Only (Protected) using Router
 const adminDocsRouter = express.Router();
-adminDocsRouter.use(authenticate, requireAdmin);
+// Fix: Apply auth middleware only to the setup route, not to serve (static files)
 adminDocsRouter.use(swaggerUi.serve);
-adminDocsRouter.get('/', swaggerUi.setup(swaggerAdminSpec, {
+adminDocsRouter.get('/', authenticate, requireAdmin, swaggerUi.setup(swaggerAdminSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API - Admin Documentation',
   swaggerOptions: {

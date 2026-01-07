@@ -68,7 +68,9 @@ Authorization: Bearer <your_jwt_token>
       { name: 'Contacts', description: 'Contact management and validation' },
       { name: 'Webhooks', description: 'Webhook configuration and logs' },
       { name: 'Schedule', description: 'Message scheduling and bulk operations' },
-      { name: 'Admin', description: 'Admin panel operations (admin only)' }
+      { name: 'Analytics', description: 'Analytics and reporting for your account' },
+      { name: 'Billing', description: 'Subscription and payment management' },
+      { name: 'API Keys', description: 'API key management for external integrations' }
     ],
     components: {
       securitySchemes: {
@@ -280,9 +282,10 @@ Authorization: Bearer <your_jwt_token>
     },
     security: [{ bearerAuth: [] }]
   },
-  // Load all docs EXCEPT admin and analytics (those are in admin swagger)
+  // Load all docs for user/public endpoints
   apis: [
     './src/docs/auth.docs.js',
+    './src/docs/analytics.docs.js',  // ✅ Added: User can access their own analytics
     './src/docs/billing.docs.js',
     './src/docs/chat.docs.js',
     './src/docs/contacts.docs.js',
@@ -293,7 +296,7 @@ Authorization: Bearer <your_jwt_token>
     './src/docs/sessions.docs.js',
     './src/docs/templates.docs.js',
     './src/docs/webhooks.docs.js'
-    // Excluded: admin.docs.js, analytics.docs.js (available in /api/admin/docs)
+    // Excluded: admin.docs.js (admin-only endpoints, available in /api/admin/docs)
   ]
 };
 

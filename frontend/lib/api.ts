@@ -168,9 +168,7 @@ export const analyticsAPI = {
 
 // Admin API
 export const adminAPI = {
-  getDashboard: () => apiClient.get('/analytics/admin/dashboard'),
-
-  getStats: () => apiClient.get('/admin/stats'),
+  getDashboard: () => apiClient.get('/admin/dashboard'),
 
   getUsers: (params?: any) =>
     apiClient.get('/admin/users', { params }),
@@ -190,16 +188,17 @@ export const adminAPI = {
   deleteUser: (userId: string) =>
     apiClient.delete(`/admin/users/${userId}`),
 
-  getApiKeys: () => apiClient.get('/admin/api-keys'),
-
-  createApiKey: (data: { name: string }) =>
-    apiClient.post('/admin/api-keys', data),
-
-  revokeApiKey: (keyId: string) =>
-    apiClient.delete(`/admin/api-keys/${keyId}`),
-
   getSystemMetrics: () =>
-    apiClient.get('/analytics/admin/system'),
+    apiClient.get('/admin/metrics'),
+
+  getSystemHealth: () =>
+    apiClient.get('/admin/health'),
+
+  getAuditLogs: (params?: any) =>
+    apiClient.get('/admin/audit-logs', { params }),
+
+  getAllSessions: (params?: any) =>
+    apiClient.get('/admin/sessions', { params }),
 
   getPlans: () =>
     apiClient.get('/admin/plans'),
