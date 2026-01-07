@@ -70,6 +70,7 @@ const checkSessionLimit = async (req, res, next) => {
  * Check message limit per day
  */
 const checkMessageLimit = async (req, res, next) => {
+  console.log('[checkMessageLimit] START - User:', req.user?.id);
   try {
     const userId = req.user.id;
 
