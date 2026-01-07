@@ -10,13 +10,21 @@ const trackApiRequest = async (req, res, next) => {
     return next();
   }
 
+  // Debug logging
+  console.log('[Analytics Middleware] Path:', req.path);
+  console.log('[Analytics Middleware] Has X-API-Key:', !!req.headers['x-api-key']);
+  console.log('[Analytics Middleware] Has Authorization:', !!req.headers['authorization']);
+  console.log('[Analytics Middleware] User ID:', req.user?.id || 'NO USER');
+
   // ONLY track API calls made with API Key (external usage)
   // Skip ALL requests that don't have X-API-Key header (JWT auth = internal dashboard)
   const apiKey = req.headers['x-api-key'];
   if (!apiKey) {
+    console.log('[Analytics Middleware] Skipping - no API key');
     return next();
   }
 
+  console.log('[Analytics Middleware] TRACKING REQUEST - has API key');
   const startTime = Date.now();
 
   // Store original end function
@@ -29,6 +37,13 @@ const trackApiRequest = async (req, res, next) => {
 
     // Track if user is authenticated via API Key
     if (req.user?.id) {
+      console.log('[Analytics Middleware] Recording to DB:', {
+        userId: req.user.id,
+        path: req.route?.path || req.path,
+        method: req.method,
+        success,
+        responseTime
+      });
       // Don't await - fire and forget
       analyticsService.trackApiRequest(
         req.user.id,
