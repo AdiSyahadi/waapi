@@ -4,17 +4,19 @@ const analyticsService = require('../services/analyticsService');
  * Middleware to track API requests
  */
 const trackApiRequest = async (req, res, next) => {
+  console.log('[Analytics Middleware] REQUEST:', req.method, req.path);
+  
   // Skip tracking for certain routes
   const skipRoutes = ['/health', '/api/docs', '/favicon.ico'];
   if (skipRoutes.some(route => req.path.startsWith(route))) {
+    console.log('[Analytics Middleware] Skipping - in skipRoutes');
     return next();
   }
 
   // Debug logging
-  console.log('[Analytics Middleware] Path:', req.path);
   console.log('[Analytics Middleware] Has X-API-Key:', !!req.headers['x-api-key']);
   console.log('[Analytics Middleware] Has Authorization:', !!req.headers['authorization']);
-  console.log('[Analytics Middleware] User ID:', req.user?.id || 'NO USER');
+  console.log('[Analytics Middleware] User ID at middleware entry:', req.user?.id || 'NO USER YET');
 
   // ONLY track API calls made with API Key (external usage)
   // Skip ALL requests that don't have X-API-Key header (JWT auth = internal dashboard)
@@ -24,7 +26,7 @@ const trackApiRequest = async (req, res, next) => {
     return next();
   }
 
-  console.log('[Analytics Middleware] TRACKING REQUEST - has API key');
+  console.log('[Analytics Middleware] WILL TRACK - has API key');
   const startTime = Date.now();
 
   // Store original end function
@@ -52,6 +54,8 @@ const trackApiRequest = async (req, res, next) => {
         success,
         responseTime
       ).catch(err => console.error('Failed to track API request:', err.message));
+    } else {
+      console.log('[Analytics Middleware] Not recording - no user at response time');
     }
 
     // Call original end
