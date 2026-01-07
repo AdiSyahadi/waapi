@@ -76,13 +76,13 @@ Authorization: Bearer <your_jwt_token>
           type: 'http',
           scheme: 'bearer',
           bearerFormat: 'JWT',
-          description: 'Enter your JWT token'
+          description: '🔒 **Dashboard Use Only** - JWT token is automatically provided when you login to the web dashboard. This auth method is for internal dashboard operations only and is NOT recommended for external API integrations.'
         },
         apiKeyAuth: {
           type: 'apiKey',
           in: 'header',
           name: 'X-API-Key',
-          description: 'Enter your API key'
+          description: '🔑 **Recommended for API Access** - Generate your API Key from the dashboard (Dashboard → API Keys menu). Use this for all external integrations and programmatic API access. Format: `wapi_xxxxxxxxxxxxxx`'
         }
       },
       schemas: {
