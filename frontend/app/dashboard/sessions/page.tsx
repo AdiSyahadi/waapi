@@ -466,8 +466,20 @@ export default function SessionsPage() {
                     <button
                       onClick={() => {
                         const id = session.session_id || session.id;
-                        navigator.clipboard.writeText(id);
-                        toast.success('Session ID copied!');
+                        // Fallback method for HTTP (non-HTTPS)
+                        const textArea = document.createElement('textarea');
+                        textArea.value = id;
+                        textArea.style.position = 'fixed';
+                        textArea.style.left = '-999999px';
+                        document.body.appendChild(textArea);
+                        textArea.select();
+                        try {
+                          document.execCommand('copy');
+                          toast.success('Session ID copied!');
+                        } catch (err) {
+                          toast.error('Failed to copy. ID: ' + id.substring(0, 30) + '...');
+                        }
+                        document.body.removeChild(textArea);
                       }}
                       className="p-1 hover:bg-gray-100 rounded transition"
                       title="Copy full Session ID"
