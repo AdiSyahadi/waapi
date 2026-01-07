@@ -439,6 +439,8 @@ class AnalyticsService {
       this.getRecentActivity(userId, 10)
     ]);
 
+    console.log('[getUserDashboard] Recent Activity Sample:', JSON.stringify(recentActivity.slice(0, 2), null, 2));
+
     return {
       overview: {
         activeSessions: sessions,
