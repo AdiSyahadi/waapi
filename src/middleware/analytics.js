@@ -10,6 +10,21 @@ const trackApiRequest = async (req, res, next) => {
     return next();
   }
 
+  // ONLY track API calls made with API Key (external usage)
+  // Skip internal dashboard/analytics requests (JWT authenticated)
+  const skipInternalRoutes = [
+    '/api/v1/analytics',
+    '/api/v1/admin',
+    '/api/v1/auth',
+    '/api/v1/users/me',
+    '/api/v1/billing',
+    '/api/v1/subscriptions'
+  ];
+  
+  if (skipInternalRoutes.some(route => req.path.startsWith(route))) {
+    return next();
+  }
+
   const startTime = Date.now();
 
   // Store original end function
@@ -20,7 +35,8 @@ const trackApiRequest = async (req, res, next) => {
     const responseTime = Date.now() - startTime;
     const success = res.statusCode >= 200 && res.statusCode < 400;
 
-    // Track if user is authenticated
+    // Track if user is authenticated (includes both API Key and JWT)
+    // But we already filtered out JWT-only routes above
     if (req.user?.id) {
       // Don't await - fire and forget
       analyticsService.trackApiRequest(
