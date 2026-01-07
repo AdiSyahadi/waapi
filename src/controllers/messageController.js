@@ -187,10 +187,23 @@ const sendMediaMessage = async (req, res) => {
     const { sessionId } = req.params;
     const { phone, type, caption } = req.body;
 
+    console.log('[sendMediaMessage] Request:', {
+      sessionId,
+      phone,
+      type,
+      caption,
+      hasFile: !!req.file,
+      file: req.file ? { filename: req.file.filename, mimetype: req.file.mimetype, size: req.file.size } : 'NO FILE',
+      body: Object.keys(req.body),
+      headers: req.headers['content-type']
+    });
+
     if (!phone || !type || !req.file) {
+      console.error('[sendMediaMessage] Missing required fields:', { phone: !!phone, type: !!type, file: !!req.file });
       return res.status(400).json({
         success: false,
-        message: 'Phone, type, and file are required'
+        message: 'Phone, type, and file are required',
+        debug: { hasPhone: !!phone, hasType: !!type, hasFile: !!req.file }
       });
     }
 
