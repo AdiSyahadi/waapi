@@ -41,8 +41,8 @@ app.use(morgan('combined', { stream: logger.stream }));
 const { authenticate } = require('./middleware/auth');
 const { requireAdmin } = require('./middleware/permissions');
 
-// Swagger API Documentation - Public (User)
-app.use('/api/docs', swaggerUi.serveFiles(swaggerPublicSpec, {}), swaggerUi.setup(swaggerPublicSpec, {
+// Swagger API Documentation - Public (User) - Simple approach
+app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerPublicSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API Documentation',
   swaggerOptions: {
@@ -53,10 +53,8 @@ app.use('/api/docs', swaggerUi.serveFiles(swaggerPublicSpec, {}), swaggerUi.setu
   }
 }));
 
-// Swagger Admin Documentation - Admin Only (Protected)
-const adminSwaggerMiddleware = swaggerUi.serveFiles(swaggerAdminSpec, {});
-app.use('/api/admin/docs', adminSwaggerMiddleware);
-app.get('/api/admin/docs', authenticate, requireAdmin, swaggerUi.setup(swaggerAdminSpec, {
+// Swagger Admin Documentation - Protected route with authentication
+app.use('/api/admin/docs', authenticate, requireAdmin, swaggerUi.serve, swaggerUi.setup(swaggerAdminSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API - Admin Documentation',
   swaggerOptions: {
