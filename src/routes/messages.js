@@ -76,8 +76,23 @@ router.use(requireVerifiedEmail);
 
 // Send messages
 router.post('/:sessionId/send/text', checkMessageLimit, sendTextValidation, validate, messageController.sendTextMessage);
-router.post('/:sessionId/send/media', checkMessageLimit, upload.single('file'), (req, res, next) => {
+router.post('/:sessionId/send/media', checkMessageLimit, (req, res, next) => {
+  console.log('[Route] send/media hit, about to upload');
+  upload.single('file')(req, res, (err) => {
+    if (err) {
+      console.error('[Multer Error]', err.message);
+      return res.status(400).json({
+        success: false,
+        message: 'File upload error',
+        error: err.message
+      });
+    }
+    console.log('[Route] Upload success, file:', req.file ? req.file.filename : 'NO FILE');
+    next();
+  });
+}, (req, res, next) => {
   const type = req.body.type || 'image';
+  console.log('[Route] Validating file type:', type);
   return validateFile(type)(req, res, next);
 }, sendMediaValidation, validate, messageController.sendMediaMessage);
 router.post('/:sessionId/send/location', checkMessageLimit, sendLocationValidation, validate, messageController.sendLocation);
