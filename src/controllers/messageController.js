@@ -207,27 +207,29 @@ const sendMediaMessage = async (req, res) => {
       });
     }
 
-    // Get session
-    const session = await db.Session.findOne({
-      where: {
-        session_id: sessionId,
-        user_id: req.user.id
-      }
-    });
+    // Get session (supports both id and session_id)
+    const session = await findSessionById(sessionId, req.user.id);
 
-    if (!session || session.status !== 'connected') {
-      return res.status(400).json({
+    if (!session) {
+      return res.status(404).json({
         success: false,
-        message: 'Session not found or not connected'
+        message: 'Session not found'
       });
     }
 
-    // Get socket
-    const sock = whatsappService.getSession(sessionId);
+    if (session.status !== 'connected') {
+      return res.status(400).json({
+        success: false,
+        message: 'Session is not connected. Please reconnect from the Sessions page.'
+      });
+    }
+
+    // Get socket using session_id (with auto-reconnect if needed)
+    const sock = await getSocketWithAutoReconnect(session);
     if (!sock) {
       return res.status(400).json({
         success: false,
-        message: 'Session socket not found'
+        message: 'Session connection lost. Please reconnect from the Sessions page.'
       });
     }
 
