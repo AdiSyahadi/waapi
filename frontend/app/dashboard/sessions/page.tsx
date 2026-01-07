@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, QrCode, Trash2, RefreshCw, MessageSquare, Power, Settings, Link2, Unlink } from 'lucide-react';
+import { Plus, QrCode, Trash2, RefreshCw, MessageSquare, Power, Settings, Link2, Unlink, Copy } from 'lucide-react';
 import { sessionsAPI } from '@/lib/api';
 import toast from 'react-hot-toast';
 
@@ -459,9 +459,22 @@ export default function SessionsPage() {
                   <p className="text-sm text-gray-500 truncate">
                     {session.phone_number || session.phoneNumber || 'No phone number'}
                   </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    ID: {session.session_id?.substring(0, 20) || session.id?.substring(0, 8)}...
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="text-xs text-gray-400 truncate">
+                      ID: {session.session_id?.substring(0, 20) || session.id?.substring(0, 20)}...
+                    </p>
+                    <button
+                      onClick={() => {
+                        const id = session.session_id || session.id;
+                        navigator.clipboard.writeText(id);
+                        toast.success('Session ID copied!');
+                      }}
+                      className="p-1 hover:bg-gray-100 rounded transition"
+                      title="Copy full Session ID"
+                    >
+                      <Copy className="h-3 w-3 text-gray-400" />
+                    </button>
+                  </div>
                 </div>
                 <span className={`px-2 py-1 text-xs rounded-full whitespace-nowrap ml-2 ${getStatusColor(session.status)}`}>
                   {session.status}
