@@ -69,6 +69,15 @@ export default function MessagesPage() {
       data.append('phone', formData.to);
       data.append('caption', formData.message);
       data.append('file', formData.file);
+      
+      // Detect media type from file MIME type
+      const mimeType = formData.file.type;
+      let mediaType = 'document'; // default
+      if (mimeType.startsWith('image/')) mediaType = 'image';
+      else if (mimeType.startsWith('video/')) mediaType = 'video';
+      else if (mimeType.startsWith('audio/')) mediaType = 'audio';
+      
+      data.append('type', mediaType);
 
       await messagesAPI.sendMedia(selectedSession, data);
       toast.success('Media sent successfully!');
