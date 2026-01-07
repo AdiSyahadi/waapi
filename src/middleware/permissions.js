@@ -148,7 +148,9 @@ const checkSubscriptionLimit = (limitType) => {
  * Skip this check if authenticated via API key
  */
 const requireVerifiedEmail = (req, res, next) => {
+  console.log('[requireVerifiedEmail] START - User:', req.user?.id, 'API Key:', !!req.apiKey);
   if (!req.user) {
+    console.log('[requireVerifiedEmail] FAIL - No user');
     return res.status(401).json({
       success: false,
       message: 'Authentication required'
@@ -157,16 +159,19 @@ const requireVerifiedEmail = (req, res, next) => {
 
   // Skip email verification check if using API key
   if (req.apiKey) {
+    console.log('[requireVerifiedEmail] PASS - API Key auth');
     return next();
   }
 
   if (!req.user.email_verified) {
+    console.log('[requireVerifiedEmail] FAIL - Email not verified');
     return res.status(403).json({
       success: false,
       message: 'Email verification required'
     });
   }
 
+  console.log('[requireVerifiedEmail] PASS - Email verified');
   next();
 };
 
