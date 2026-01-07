@@ -4,7 +4,6 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerPublicSpec = require('./config/swagger');
-const swaggerAdminSpec = require('./config/swagger-admin');
 require('dotenv').config();
 
 // Global error handlers - MUST be before any other code
@@ -41,22 +40,10 @@ app.use(morgan('combined', { stream: logger.stream }));
 const { authenticate } = require('./middleware/auth');
 const { requireAdmin } = require('./middleware/permissions');
 
-// Swagger API Documentation - Public (User) - Simple approach
+// Swagger API Documentation - Single public documentation (admin endpoints excluded)
 app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerPublicSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API Documentation',
-  swaggerOptions: {
-    persistAuthorization: true,
-    displayRequestDuration: true,
-    filter: true,
-    showExtensions: true
-  }
-}));
-
-// Swagger Admin Documentation - Protected route with authentication
-app.use('/api/admin/docs', authenticate, requireAdmin, swaggerUi.serve, swaggerUi.setup(swaggerAdminSpec, {
-  customCss: '.swagger-ui .topbar { display: none }',
-  customSiteTitle: 'WhatsApp API - Admin Documentation',
   swaggerOptions: {
     persistAuthorization: true,
     displayRequestDuration: true,
