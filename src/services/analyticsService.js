@@ -143,6 +143,48 @@ class AnalyticsService {
       raw: true
     });
 
+    // Fallback: If no analytics data, get from messages table directly
+    if (!totals || parseInt(totals?.totalSent || 0) === 0) {
+      const messageWhere = {
+        user_id: userId,
+        created_at: { [Op.between]: [new Date(startDate), new Date(endDate)] }
+      };
+
+      if (sessionId) {
+        messageWhere.session_id = sessionId;
+      }
+
+      const messagesCount = await Message.count({
+        where: messageWhere,
+        col: 'status',
+        group: ['status']
+      });
+
+      const totalMessages = await Message.count({ where: messageWhere });
+      const deliveredMessages = await Message.count({ where: { ...messageWhere, status: 'delivered' } });
+      const readMessages = await Message.count({ where: { ...messageWhere, status: 'read' } });
+      const failedMessages = await Message.count({ where: { ...messageWhere, status: 'failed' } });
+
+      return {
+        daily: [],
+        totals: {
+          sent: totalMessages,
+          delivered: deliveredMessages,
+          read: readMessages,
+          failed: failedMessages,
+          received: 0,
+          media: 0,
+          broadcasts: 0
+        },
+        deliveryRate: totalMessages > 0 
+          ? ((deliveredMessages / totalMessages) * 100).toFixed(2) 
+          : 0,
+        readRate: deliveredMessages > 0 
+          ? ((readMessages / deliveredMessages) * 100).toFixed(2) 
+          : 0
+      };
+    }
+
     return {
       daily: stats,
       totals: {
