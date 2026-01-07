@@ -140,8 +140,11 @@ const checkMessageLimit = async (req, res, next) => {
       remaining: messageLimit - todayMessagesCount
     };
 
+    console.log('[checkMessageLimit] PASS - Remaining:', req.messageLimit.remaining);
     next();
   } catch (error) {
+    console.error('[checkMessageLimit] ERROR:', error.message);
+    console.error('[checkMessageLimit] Stack:', error.stack);
     logger.error('Message limit check failed:', error);
     res.status(500).json({
       success: false,
