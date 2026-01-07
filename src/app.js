@@ -41,11 +41,10 @@ app.use(morgan('combined', { stream: logger.stream }));
 const { authenticate } = require('./middleware/auth');
 const { requireAdmin } = require('./middleware/permissions');
 
-// Swagger API Documentation - Public (User)
-const swaggerUiPublic = swaggerUi.serveFiles(swaggerSpec, {});
-app.get('/api/docs', (req, res, next) => {
-  swaggerUiPublic(req, res, next);
-}, swaggerUi.setup(swaggerSpec, {
+// Swagger API Documentation - Public (User) using Router
+const publicDocsRouter = express.Router();
+publicDocsRouter.use(swaggerUi.serve);
+publicDocsRouter.get('/', swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API Documentation',
   swaggerOptions: {
@@ -55,12 +54,13 @@ app.get('/api/docs', (req, res, next) => {
     showExtensions: true
   }
 }));
+app.use('/api/docs', publicDocsRouter);
 
-// Swagger Admin Documentation - Admin Only (Protected)
-const swaggerUiAdmin = swaggerUi.serveFiles(swaggerAdminSpec, {});
-app.get('/api/admin/docs', authenticate, requireAdmin, (req, res, next) => {
-  swaggerUiAdmin(req, res, next);
-}, swaggerUi.setup(swaggerAdminSpec, {
+// Swagger Admin Documentation - Admin Only (Protected) using Router
+const adminDocsRouter = express.Router();
+adminDocsRouter.use(authenticate, requireAdmin);
+adminDocsRouter.use(swaggerUi.serve);
+adminDocsRouter.get('/', swaggerUi.setup(swaggerAdminSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API - Admin Documentation',
   swaggerOptions: {
@@ -70,6 +70,7 @@ app.get('/api/admin/docs', authenticate, requireAdmin, (req, res, next) => {
     showExtensions: true
   }
 }));
+app.use('/api/admin/docs', adminDocsRouter);
 
 // Swagger JSON endpoints
 app.get('/api/docs.json', (req, res) => {
