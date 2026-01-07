@@ -149,7 +149,7 @@ class AnalyticsService {
       
       // Get user's sessions first
       const userSessions = await Session.findAll({
-        where: { userId },
+        where: { user_id: userId },
         attributes: ['id'],
         raw: true
       });

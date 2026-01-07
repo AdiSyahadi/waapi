@@ -13,20 +13,6 @@ const trackApiRequest = async (req, res, next) => {
     return next();
   }
 
-  // Debug logging
-  console.log('[Analytics Middleware] Has X-API-Key:', !!req.headers['x-api-key']);
-  console.log('[Analytics Middleware] Has Authorization:', !!req.headers['authorization']);
-  console.log('[Analytics Middleware] User ID at middleware entry:', req.user?.id || 'NO USER YET');
-
-  // ONLY track API calls made with API Key (external usage)
-  // Skip ALL requests that don't have X-API-Key header (JWT auth = internal dashboard)
-  const apiKey = req.headers['x-api-key'];
-  if (!apiKey) {
-    console.log('[Analytics Middleware] Skipping - no API key');
-    return next();
-  }
-
-  console.log('[Analytics Middleware] WILL TRACK - has API key');
   const startTime = Date.now();
 
   // Store original end function
@@ -37,9 +23,10 @@ const trackApiRequest = async (req, res, next) => {
     const responseTime = Date.now() - startTime;
     const success = res.statusCode >= 200 && res.statusCode < 400;
 
-    // Track if user is authenticated via API Key
-    if (req.user?.id) {
-      console.log('[Analytics Middleware] Recording to DB:', {
+    // ONLY track API calls made with API Key (external usage)
+    // Skip JWT auth requests (internal dashboard)
+    if (req.user?.id && req.isApiKeyAuth === true) {
+      console.log('[Analytics Middleware] Recording to DB - API Key auth:', {
         userId: req.user.id,
         path: req.route?.path || req.path,
         method: req.method,
@@ -55,7 +42,7 @@ const trackApiRequest = async (req, res, next) => {
         responseTime
       ).catch(err => console.error('Failed to track API request:', err.message));
     } else {
-      console.log('[Analytics Middleware] Not recording - no user at response time');
+      console.log('[Analytics Middleware] Not recording - JWT auth or no user');
     }
 
     // Call original end

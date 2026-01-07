@@ -79,6 +79,7 @@ const authenticateApiKey = async (req, res, next) => {
     // Attach to request
     req.apiKey = keyRecord;
     req.user = keyRecord.user;
+    req.isApiKeyAuth = true; // Flag untuk analytics tracking
     
     next();
   } catch (error) {
