@@ -3,7 +3,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
-const swaggerSpec = require('./config/swagger');
+const swaggerPublicSpec = require('./config/swagger');
 const swaggerAdminSpec = require('./config/swagger-admin');
 require('dotenv').config();
 
@@ -44,7 +44,7 @@ const { requireAdmin } = require('./middleware/permissions');
 // Swagger API Documentation - Public (User) using Router
 const publicDocsRouter = express.Router();
 publicDocsRouter.use(swaggerUi.serve);
-publicDocsRouter.get('/', swaggerUi.setup(swaggerSpec, {
+publicDocsRouter.get('/', swaggerUi.setup(swaggerPublicSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API Documentation',
   swaggerOptions: {
@@ -75,7 +75,7 @@ app.use('/api/admin/docs', adminDocsRouter);
 // Swagger JSON endpoints
 app.get('/api/docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
-  res.send(swaggerSpec);
+  res.send(swaggerPublicSpec);
 });
 
 app.get('/api/admin/docs.json', authenticate, requireAdmin, (req, res) => {
