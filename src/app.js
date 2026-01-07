@@ -147,16 +147,23 @@ app.use((req, res) => {
 
 // Global error handler
 app.use((err, req, res, next) => {
+  console.error('❌ [Global Error Handler] Error:', err.message);
+  console.error('❌ [Global Error Handler] Stack:', err.stack);
+  console.error('❌ [Global Error Handler] URL:', req.method, req.url);
+  console.error('❌ [Global Error Handler] Body:', JSON.stringify(req.body));
+  
   logger.error('Error occurred:', {
     message: err.message,
     stack: err.stack,
     url: req.url,
-    method: req.method
+    method: req.method,
+    body: req.body
   });
   
   res.status(err.status || 500).json({
     success: false,
     message: err.message || 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined,
     ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
   });
 });

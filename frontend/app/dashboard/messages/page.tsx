@@ -50,6 +50,7 @@ export default function MessagesPage() {
       });
       toast.success('Message sent successfully!');
       setFormData({ to: '', message: '', file: null });
+      setSelectedSession(''); // Reset session selection
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to send message');
     } finally {
@@ -83,6 +84,7 @@ export default function MessagesPage() {
       await messagesAPI.sendMedia(selectedSession, data);
       toast.success('Media sent successfully!');
       setFormData({ to: '', message: '', file: null });
+      setSelectedSession(''); // Reset session selection
       // Force remount file input by changing key
       setFileInputKey(prev => prev + 1);
     } catch (error: any) {
