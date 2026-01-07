@@ -1,9 +1,20 @@
 /**
  * @swagger
- * /api/v1/messages/text:
+ * /api/v1/messages/{sessionId}/send/text:
  *   post:
  *     summary: Send text message
  *     tags: [Messages]
+ *     security:
+ *       - apiKeyAuth: []
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: WhatsApp session ID (UUID)
+ *         example: "266cdcce-97a1-4d70-a6c5-b561b90acdfd"
  *     requestBody:
  *       required: true
  *       content:
@@ -11,23 +22,19 @@
  *           schema:
  *             type: object
  *             required:
- *               - session_id
- *               - recipient
+ *               - phone
  *               - message
  *             properties:
- *               session_id:
+ *               phone:
  *                 type: string
- *                 example: session_abc123
- *               recipient:
- *                 type: string
- *                 description: Phone number with country code
+ *                 description: Phone number with country code (no + or spaces)
  *                 example: "6281234567890"
  *               message:
  *                 type: string
  *                 example: Hello, this is a test message!
  *     responses:
  *       200:
- *         description: Message sent
+ *         description: Message sent successfully
  *         content:
  *           application/json:
  *             schema:
@@ -35,12 +42,24 @@
  *               properties:
  *                 success:
  *                   type: boolean
- *                 message_id:
+ *                   example: true
+ *                 message:
  *                   type: string
- *                 status:
- *                   type: string
+ *                   example: Message sent successfully
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     message_id:
+ *                       type: string
+ *                     status:
+ *                       type: string
  *       400:
  *         $ref: '#/components/responses/ValidationError'
+ *       401:
+ *         $ref: '#/components/responses/Unauthorized'
+ *       404:
+ *         description: Session not found
+ */
  *
  * /api/v1/messages/image:
  *   post:
