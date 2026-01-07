@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./config/swagger');
+const swaggerAdminSpec = require('./config/swagger-admin');
 require('dotenv').config();
 
 // Global error handlers - MUST be before any other code
@@ -36,8 +37,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: logger.stream }));
 
-// Swagger API Documentation
-app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+// Swagger API Documentation - Public (User)
+app.use('/api/docs', swaggerUi.serve);
+app.get('/api/docs', swaggerUi.setup(swaggerSpec, {
   customCss: '.swagger-ui .topbar { display: none }',
   customSiteTitle: 'WhatsApp API Documentation',
   swaggerOptions: {
@@ -48,10 +50,28 @@ app.use('/api/docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
   }
 }));
 
-// Swagger JSON endpoint
+// Swagger Admin Documentation - Admin Only
+const { requireAdmin } = require('./middleware/permissions');
+app.get('/api/admin/docs', requireAdmin, swaggerUi.setup(swaggerAdminSpec, {
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'WhatsApp API - Admin Documentation',
+  swaggerOptions: {
+    persistAuthorization: true,
+    displayRequestDuration: true,
+    filter: true,
+    showExtensions: true
+  }
+}));
+
+// Swagger JSON endpoints
 app.get('/api/docs.json', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   res.send(swaggerSpec);
+});
+
+app.get('/api/admin/docs.json', requireAdmin, (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerAdminSpec);
 });
 
 // Health check endpoint

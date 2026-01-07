@@ -280,7 +280,21 @@ Authorization: Bearer <your_jwt_token>
     },
     security: [{ bearerAuth: [] }]
   },
-  apis: ['./src/docs/*.js']
+  // Load all docs EXCEPT admin and analytics (those are in admin swagger)
+  apis: [
+    './src/docs/auth.docs.js',
+    './src/docs/billing.docs.js',
+    './src/docs/chat.docs.js',
+    './src/docs/contacts.docs.js',
+    './src/docs/groups.docs.js',
+    './src/docs/index.docs.js',
+    './src/docs/messages.docs.js',
+    './src/docs/schedule.docs.js',
+    './src/docs/sessions.docs.js',
+    './src/docs/templates.docs.js',
+    './src/docs/webhooks.docs.js'
+    // Excluded: admin.docs.js, analytics.docs.js (available in /api/admin/docs)
+  ]
 };
 
 const swaggerSpec = swaggerJsdoc(options);
