@@ -6,7 +6,6 @@
  */
 
 const db = require('../src/models');
-const logger = require('../src/utils/logger');
 
 /**
  * Extract message content from raw message object
@@ -201,7 +200,7 @@ async function fixEmptyMessages(sessionId = null) {
           stillEmpty++;
         }
       } catch (error) {
-        logger.error(`Failed to fix message ${message.id}:`, error);
+        console.error(`Failed to fix message ${message.id}:`, error.message);
       }
     }
 
