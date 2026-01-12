@@ -376,8 +376,10 @@ class WhatsAppService {
           }
         };
 
-        // Save to database
-        await db.Message.create(messageData);
+        // Save to database with upsert to prevent duplicates
+        await db.Message.upsert(messageData, {
+          conflictFields: ['message_id', 'session_id']
+        });
 
         logWhatsApp(sessionId, 'message_received', {
           from: msg.key.remoteJid,
