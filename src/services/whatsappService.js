@@ -613,11 +613,11 @@ class WhatsAppService {
           session_id: session.sessionRecord.id 
         },
         attributes: [
-          'to',
+          'remote_jid',
           [db.Sequelize.fn('MAX', db.Sequelize.col('timestamp')), 'last_timestamp'],
           [db.Sequelize.fn('COUNT', db.Sequelize.col('id')), 'message_count']
         ],
-        group: ['to'],
+        group: ['remote_jid'],
         order: [[db.Sequelize.literal('last_timestamp'), 'DESC']],
         raw: true
       });
@@ -628,21 +628,21 @@ class WhatsAppService {
           const lastMessage = await Message.findOne({
             where: {
               session_id: session.sessionRecord.id,
-              to: chat.to
+              remote_jid: chat.remote_jid
             },
             order: [['timestamp', 'DESC']]
           });
 
-          const isGroup = chat.to.endsWith('@g.us');
-          const phone = isGroup ? null : chat.to.split('@')[0];
+          const isGroup = chat.remote_jid.endsWith('@g.us');
+          const phone = isGroup ? null : chat.remote_jid.split('@')[0];
 
           return {
-            id: chat.to,
+            id: chat.remote_jid,
             name: phone || 'Unknown', // We don't store names in DB yet
             phone: phone,
             lastMessage: lastMessage ? {
-              id: lastMessage.wa_message_id,
-              body: lastMessage.body,
+              id: lastMessage.message_id,
+              body: lastMessage.content,
               timestamp: lastMessage.timestamp.getTime(),
               timestampISO: lastMessage.timestamp.toISOString(),
               fromMe: lastMessage.from_me,
@@ -714,7 +714,7 @@ class WhatsAppService {
       // Build where clause
       const where = {
         session_id: session.sessionRecord.id,
-        to: chatId
+        remote_jid: chatId
       };
 
       // Apply filters
@@ -739,15 +739,15 @@ class WhatsAppService {
 
       // Format messages
       const formattedMessages = messages.map(msg => ({
-        id: msg.wa_message_id,
-        remoteJid: msg.to,
+        id: msg.message_id,
+        remoteJid: msg.remote_jid,
         fromMe: msg.from_me,
         timestamp: msg.timestamp.getTime(),
         timestampISO: msg.timestamp.toISOString(),
-        pushName: msg.sender_name || null,
+        pushName: null, // Not stored in database
         status: msg.status,
         type: msg.type,
-        body: msg.body,
+        body: msg.content,
         hasMedia: ['image', 'video', 'audio', 'document', 'sticker'].includes(msg.type),
         mediaUrl: msg.media_url,
         mediaType: ['image', 'video', 'audio', 'document', 'sticker'].includes(msg.type) ? msg.type : null,
