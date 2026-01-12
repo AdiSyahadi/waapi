@@ -4,6 +4,7 @@ const authController = require('../controllers/authController');
 const verificationController = require('../controllers/verificationController');
 const twoFactorController = require('../controllers/twoFactorController');
 const { authenticate } = require('../middleware/auth');
+const { authLimiter } = require('../middleware/rateLimiter');
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validator');
 
@@ -24,9 +25,9 @@ const refreshTokenValidation = [
   body('refreshToken').notEmpty().withMessage('Refresh token is required')
 ];
 
-// Auth routes
-router.post('/register', registerValidation, validate, authController.register);
-router.post('/login', loginValidation, validate, authController.login);
+// Auth routes (with rate limiting)
+router.post('/register', authLimiter, registerValidation, validate, authController.register);
+router.post('/login', authLimiter, loginValidation, validate, authController.login);
 router.post('/refresh', refreshTokenValidation, validate, authController.refreshToken);
 router.get('/profile', authenticate, authController.getProfile);
 router.post('/logout', authenticate, authController.logout);

@@ -5,6 +5,7 @@ const { authenticate } = require('../middleware/auth');
 const { authenticateWithApiKeySupport } = require('../middleware/authOrApiKey');
 const { requireVerifiedEmail, checkSubscriptionLimit } = require('../middleware/permissions');
 const { checkMessageLimit } = require('../middleware/sessionLimit');
+const { messageLimiter } = require('../middleware/rateLimiter');
 const { validateFile } = require('../middleware/fileValidation');
 const { upload } = require('../config/upload');
 const { body } = require('express-validator');
@@ -75,8 +76,9 @@ router.use(authenticateWithApiKeySupport);
 router.use(requireVerifiedEmail);
 
 // Send messages
-router.post('/:sessionId/send/text', checkMessageLimit, sendTextValidation, validate, messageController.sendTextMessage);
+router.post('/:sessionId/send/text', messageLimiter, checkMessageLimit, sendTextValidation, validate, messageController.sendTextMessage);
 router.post('/:sessionId/send/media', 
+  messageLimiter,
   (req, res, next) => {
     console.log('[Route Wrapper 1] BEFORE checkMessageLimit');
     next();
@@ -118,15 +120,15 @@ router.post('/:sessionId/send/media',
   validate, 
   messageController.sendMediaMessage
 );
-router.post('/:sessionId/send/location', checkMessageLimit, sendLocationValidation, validate, messageController.sendLocation);
-router.post('/:sessionId/send/contact', checkMessageLimit, sendContactValidation, validate, messageController.sendContact);
-router.post('/:sessionId/send/button', checkMessageLimit, sendButtonValidation, validate, messageController.sendButton);
-router.post('/:sessionId/send/list', checkMessageLimit, sendListValidation, validate, messageController.sendList);
-router.post('/:sessionId/send/poll', checkMessageLimit, sendPollValidation, validate, messageController.sendPoll);
+router.post('/:sessionId/send/location', messageLimiter, checkMessageLimit, sendLocationValidation, validate, messageController.sendLocation);
+router.post('/:sessionId/send/contact', messageLimiter, checkMessageLimit, sendContactValidation, validate, messageController.sendContact);
+router.post('/:sessionId/send/button', messageLimiter, checkMessageLimit, sendButtonValidation, validate, messageController.sendButton);
+router.post('/:sessionId/send/list', messageLimiter, checkMessageLimit, sendListValidation, validate, messageController.sendList);
+router.post('/:sessionId/send/poll', messageLimiter, checkMessageLimit, sendPollValidation, validate, messageController.sendPoll);
 
 // Message operations
-router.post('/:sessionId/reply', checkMessageLimit, replyValidation, validate, messageController.replyMessage);
-router.post('/:sessionId/forward', checkMessageLimit, forwardValidation, validate, messageController.forwardMessage);
+router.post('/:sessionId/reply', messageLimiter, checkMessageLimit, replyValidation, validate, messageController.replyMessage);
+router.post('/:sessionId/forward', messageLimiter, checkMessageLimit, forwardValidation, validate, messageController.forwardMessage);
 router.delete('/:sessionId/message/:messageId', messageController.deleteMessage);
 router.post('/:sessionId/react', reactValidation, validate, messageController.reactMessage);
 router.put('/:sessionId/message/:messageId', editValidation, validate, messageController.editMessage);

@@ -4,6 +4,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const swaggerUi = require('swagger-ui-express');
 const swaggerPublicSpec = require('./config/swagger');
+const { apiLimiter } = require('./middleware/rateLimiter');
 require('dotenv').config();
 
 // Global error handlers - MUST be before any other code
@@ -31,7 +32,41 @@ const app = express();
 app.use(helmet({
   contentSecurityPolicy: false // Disable for Swagger UI
 }));
-app.use(cors());
+
+// CORS Configuration - Whitelist specific origins
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Allow requests with no origin (mobile apps, Postman, etc.)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || 'http://localhost:3001',
+      process.env.APP_URL || 'http://localhost:3000',
+      /\.localhost$/,
+      /^http:\/\/localhost:/,
+      /^http:\/\/127\.0\.0\.1:/
+    ];
+    
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed instanceof RegExp) return allowed.test(origin);
+      return allowed === origin;
+    });
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-API-Key', 'X-Requested-With']
+};
+app.use(cors(corsOptions));
+
+// Global API Rate Limiter
+app.use('/api/', apiLimiter);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined', { stream: logger.stream }));

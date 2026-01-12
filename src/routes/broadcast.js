@@ -5,6 +5,7 @@ const { authenticate } = require('../middleware/auth');
 const { requireVerifiedEmail } = require('../middleware/permissions');
 const { checkBulkMessageLimit } = require('../middleware/sessionLimit');
 const { checkFeatureAccess } = require('../middleware/sessionLimit');
+const { broadcastLimiter } = require('../middleware/rateLimiter');
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validator');
 
@@ -20,8 +21,8 @@ const sendBroadcastValidation = [
 router.use(authenticate);
 router.use(requireVerifiedEmail);
 
-// Routes
-router.post('/:sessionId/broadcast', checkFeatureAccess('bulk_messaging'), checkBulkMessageLimit, sendBroadcastValidation, validate, broadcastController.sendBroadcast);
+// Routes (with broadcast rate limiter - 5 per hour)
+router.post('/:sessionId/broadcast', broadcastLimiter, checkFeatureAccess('bulk_messaging'), checkBulkMessageLimit, sendBroadcastValidation, validate, broadcastController.sendBroadcast);
 router.get('/broadcast/:broadcastId', broadcastController.getBroadcastStatus);
 router.delete('/broadcast/:broadcastId', broadcastController.cancelBroadcast);
 

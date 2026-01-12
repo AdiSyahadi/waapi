@@ -4,6 +4,7 @@ const sessionController = require('../controllers/sessionController');
 const { authenticate } = require('../middleware/auth');
 const { authenticateWithApiKeySupport } = require('../middleware/authOrApiKey');
 const { requireVerifiedEmail, checkSubscriptionLimit } = require('../middleware/permissions');
+const { sessionCreationLimiter } = require('../middleware/rateLimiter');
 const { body } = require('express-validator');
 const { validate } = require('../middleware/validator');
 
@@ -29,7 +30,7 @@ router.use(authenticateWithApiKeySupport);
 router.use(requireVerifiedEmail);
 
 // Routes
-router.post('/', checkSubscriptionLimit('sessions'), createSessionValidation, validate, sessionController.createSession);
+router.post('/', sessionCreationLimiter, checkSubscriptionLimit('sessions'), createSessionValidation, validate, sessionController.createSession);
 router.get('/', sessionController.getSessions);
 router.get('/:id', sessionController.getSession);
 router.get('/:id/qr', sessionController.getQRCode);

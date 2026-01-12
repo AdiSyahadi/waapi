@@ -3,6 +3,7 @@ const db = require('../models');
 const { logger } = require('../config/logger');
 const { generateWebhookSignature } = require('../utils/webhookSigner');
 const { addMessageJob } = require('../config/queue');
+const { validateWebhookUrlSync } = require('../utils/ssrfProtection');
 
 class WebhookService {
   constructor() {
@@ -15,6 +16,20 @@ class WebhookService {
    */
   async sendWebhook(webhookUrl, payload, secret, retryCount = 0) {
     try {
+      // SSRF Protection - validate URL before sending
+      const validation = validateWebhookUrlSync(webhookUrl);
+      if (!validation.valid) {
+        logger.warn('Webhook URL blocked by SSRF protection', {
+          url: webhookUrl,
+          reason: validation.error
+        });
+        return {
+          success: false,
+          error: validation.error,
+          blocked: true
+        };
+      }
+
       const payloadString = JSON.stringify(payload);
       const signature = secret ? generateWebhookSignature(payloadString, secret) : null;
 
