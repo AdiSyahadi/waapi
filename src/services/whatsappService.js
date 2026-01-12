@@ -742,8 +742,8 @@ class WhatsAppService {
         id: msg.message_id,
         remoteJid: msg.remote_jid,
         fromMe: msg.from_me,
-        timestamp: msg.timestamp.getTime(),
-        timestampISO: msg.timestamp.toISOString(),
+        timestamp: msg.timestamp instanceof Date ? msg.timestamp.getTime() : msg.timestamp,
+        timestampISO: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : new Date(msg.timestamp).toISOString(),
         pushName: null, // Not stored in database
         status: msg.status,
         type: msg.type,
