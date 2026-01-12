@@ -26,6 +26,7 @@ router.use(requireVerifiedEmail);
 // Chat list & history
 router.get('/:sessionId/chats', chatController.getChatList);
 router.get('/:sessionId/chat/:jid/history', chatController.getChatHistory);
+router.get('/:sessionId/conversation/:jid', chatController.getConversation); // Fix #4: Complete conversation in 1 call
 router.get('/:sessionId/search', chatController.searchMessages);
 
 // Message actions

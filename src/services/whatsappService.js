@@ -227,6 +227,15 @@ class WhatsAppService {
         logger.error(`Message update handler error for ${sessionId}:`, error);
       }
     });
+
+    // Presence updates (typing, online status)
+    sock.ev.on('presence.update', async (presence) => {
+      try {
+        await this.handlePresenceUpdate(sessionId, presence, sessionRecord);
+      } catch (error) {
+        logger.error(`Presence update handler error for ${sessionId}:`, error);
+      }
+    });
   }
 
   /**
@@ -391,6 +400,26 @@ class WhatsAppService {
           message: messageData,
           raw: msg
         });
+
+        // Fix #5: Auto-update contact.last_message_at
+        if (!msg.key.remoteJid.endsWith('@g.us')) {
+          const phone = msg.key.remoteJid.split('@')[0];
+          await db.Contact.update(
+            {
+              last_message_at: new Date(),
+              push_name: msg.pushName || undefined // Update push_name if available
+            },
+            {
+              where: {
+                session_id: sessionRecord.id,
+                phone: phone
+              }
+            }
+          ).catch(err => {
+            // Silently fail if contact doesn't exist
+            logger.debug(`Contact update skipped for ${phone}:`, err.message);
+          });
+        }
       }
     } catch (error) {
       logger.error(`Message handler error for ${sessionId}:`, error);
@@ -399,24 +428,103 @@ class WhatsAppService {
 
   /**
    * Handle message updates (status changes)
+   * Now triggers webhooks for: message.sent, message.delivered, message.read, message.failed
    */
   async handleMessageUpdates(sessionId, updates, sessionRecord) {
     try {
       for (const update of updates) {
         const status = update.update.status;
+        const mappedStatus = this.mapMessageStatus(status);
         
-        await db.Message.update(
+        // Update message in database
+        const [affectedRows] = await db.Message.update(
           {
-            status: this.mapMessageStatus(status),
-            [`${this.mapMessageStatus(status)}_at`]: new Date()
+            status: mappedStatus,
+            [`${mappedStatus}_at`]: new Date()
           },
           {
             where: { message_id: update.key.id }
           }
         );
+
+        // Trigger webhook for status change
+        if (affectedRows > 0) {
+          // Get the updated message for webhook payload
+          const message = await db.Message.findOne({
+            where: { message_id: update.key.id }
+          });
+
+          if (message) {
+            // Trigger appropriate webhook event based on status
+            const webhookEvent = `message.${mappedStatus}`;
+            await this.triggerWebhook(sessionRecord, webhookEvent, {
+              messageId: update.key.id,
+              remoteJid: update.key.remoteJid,
+              status: mappedStatus,
+              timestamp: new Date().toISOString(),
+              message: {
+                id: message.message_id,
+                content: message.content,
+                type: message.type,
+                fromMe: message.from_me,
+                remoteJid: message.remote_jid
+              }
+            });
+
+            logWhatsApp(sessionId, `message_${mappedStatus}`, {
+              messageId: update.key.id,
+              remoteJid: update.key.remoteJid
+            });
+          }
+        }
       }
     } catch (error) {
       logger.error(`Message update handler error for ${sessionId}:`, error);
+    }
+  }
+
+  /**
+   * Handle presence updates (typing indicators, online status)
+   * Fix #1: Add typing webhook event
+   */
+  async handlePresenceUpdate(sessionId, presence, sessionRecord) {
+    try {
+      const { id: jid, presences } = presence;
+      
+      if (!presences) return;
+
+      for (const [participantJid, presenceData] of Object.entries(presences)) {
+        const { lastKnownPresence } = presenceData;
+        
+        // Map presence to event type
+        let eventType = null;
+        if (lastKnownPresence === 'composing') {
+          eventType = 'chat.typing';
+        } else if (lastKnownPresence === 'recording') {
+          eventType = 'chat.recording';
+        } else if (lastKnownPresence === 'available') {
+          eventType = 'contact.online';
+        } else if (lastKnownPresence === 'unavailable') {
+          eventType = 'contact.offline';
+        }
+
+        if (eventType) {
+          await this.triggerWebhook(sessionRecord, eventType, {
+            jid: jid,
+            participant: participantJid,
+            presence: lastKnownPresence,
+            timestamp: new Date().toISOString()
+          });
+
+          logWhatsApp(sessionId, eventType, {
+            jid,
+            participant: participantJid,
+            presence: lastKnownPresence
+          });
+        }
+      }
+    } catch (error) {
+      logger.error(`Presence update handler error for ${sessionId}:`, error);
     }
   }
 
