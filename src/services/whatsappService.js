@@ -366,7 +366,14 @@ class WhatsAppService {
           timestamp: parseInt(msg.messageTimestamp),
           type: this.getMessageType(msg.message),
           content: this.extractMessageContent(msg.message),
-          status: 'delivered'
+          status: 'delivered',
+          metadata: {
+            raw_message: msg.message,
+            push_name: msg.pushName,
+            message_timestamp: msg.messageTimestamp,
+            broadcast: msg.broadcast || false,
+            participant: msg.participant || null
+          }
         };
 
         // Save to database
@@ -421,8 +428,20 @@ class WhatsAppService {
     if (message.audioMessage) return 'audio';
     if (message.documentMessage) return 'document';
     if (message.stickerMessage) return 'sticker';
-    if (message.locationMessage) return 'location';
-    if (message.contactMessage) return 'contact';
+    if (message.locationMessage || message.liveLocationMessage) return 'location';
+    if (message.contactMessage || message.contactsArrayMessage) return 'contact';
+    if (message.buttonsResponseMessage) return 'button_response';
+    if (message.listResponseMessage) return 'list_response';
+    if (message.templateButtonReplyMessage) return 'template_reply';
+    if (message.productMessage) return 'product';
+    if (message.orderMessage) return 'order';
+    if (message.invoiceMessage) return 'invoice';
+    if (message.pollCreationMessage) return 'poll';
+    if (message.pollUpdateMessage) return 'poll_update';
+    if (message.reactionMessage) return 'reaction';
+    if (message.viewOnceMessage) return 'view_once';
+    if (message.ephemeralMessage) return this.getMessageType(message.ephemeralMessage.message || {});
+    if (message.protocolMessage) return 'protocol';
     return 'text';
   }
 
@@ -430,8 +449,132 @@ class WhatsAppService {
    * Extract message content
    */
   extractMessageContent(message) {
-    if (message.conversation) return message.conversation;
-    if (message.extendedTextMessage) return message.extendedTextMessage.text;
+    // Extract text from various message types
+    if (message.conversation) {
+      return message.conversation;
+    }
+    
+    if (message.extendedTextMessage?.text) {
+      return message.extendedTextMessage.text;
+    }
+    
+    // Image with caption
+    if (message.imageMessage?.caption) {
+      return message.imageMessage.caption;
+    }
+    
+    // Video with caption
+    if (message.videoMessage?.caption) {
+      return message.videoMessage.caption;
+    }
+    
+    // Document with caption
+    if (message.documentMessage?.caption) {
+      return message.documentMessage.caption;
+    }
+    
+    // Audio message (no text content, return empty)
+    if (message.audioMessage) {
+      return '';
+    }
+    
+    // Sticker (no text content)
+    if (message.stickerMessage) {
+      return '';
+    }
+    
+    // Location message
+    if (message.locationMessage) {
+      const loc = message.locationMessage;
+      return loc.name || loc.address || `Location: ${loc.degreesLatitude},${loc.degreesLongitude}`;
+    }
+    
+    // Contact message
+    if (message.contactMessage) {
+      return message.contactMessage.displayName || message.contactMessage.vcard || 'Contact';
+    }
+    
+    // Contact array
+    if (message.contactsArrayMessage) {
+      return `${message.contactsArrayMessage.contacts?.length || 0} contacts`;
+    }
+    
+    // Button response
+    if (message.buttonsResponseMessage) {
+      return message.buttonsResponseMessage.selectedDisplayText || message.buttonsResponseMessage.selectedButtonId || '';
+    }
+    
+    // List response
+    if (message.listResponseMessage) {
+      return message.listResponseMessage.title || message.listResponseMessage.singleSelectReply?.selectedRowId || '';
+    }
+    
+    // Template button reply
+    if (message.templateButtonReplyMessage) {
+      return message.templateButtonReplyMessage.selectedDisplayText || message.templateButtonReplyMessage.selectedId || '';
+    }
+    
+    // Live location
+    if (message.liveLocationMessage) {
+      const loc = message.liveLocationMessage;
+      return `Live Location: ${loc.degreesLatitude},${loc.degreesLongitude}`;
+    }
+    
+    // Product message
+    if (message.productMessage) {
+      return message.productMessage.product?.title || 'Product';
+    }
+    
+    // Order message
+    if (message.orderMessage) {
+      return `Order: ${message.orderMessage.itemCount || 0} items`;
+    }
+    
+    // Invoice message
+    if (message.invoiceMessage) {
+      return message.invoiceMessage.note || 'Invoice';
+    }
+    
+    // Poll creation
+    if (message.pollCreationMessage) {
+      return message.pollCreationMessage.name || 'Poll';
+    }
+    
+    // Poll update
+    if (message.pollUpdateMessage) {
+      return 'Poll vote';
+    }
+    
+    // Reaction
+    if (message.reactionMessage) {
+      return message.reactionMessage.text || '(reaction)';
+    }
+    
+    // View once message
+    if (message.viewOnceMessage) {
+      return this.extractMessageContent(message.viewOnceMessage.message || {});
+    }
+    
+    // Ephemeral message
+    if (message.ephemeralMessage) {
+      return this.extractMessageContent(message.ephemeralMessage.message || {});
+    }
+    
+    // Protocol message (usually system messages)
+    if (message.protocolMessage) {
+      const types = {
+        0: 'Message deleted',
+        1: 'Message revoked',
+        2: 'Ephemeral setting changed',
+        3: 'Ephemeral sync response',
+        4: 'History sync notification',
+        5: 'App state sync key share',
+        6: 'App state sync key request',
+        7: 'Message edit'
+      };
+      return types[message.protocolMessage.type] || 'System message';
+    }
+    
     return '';
   }
 
