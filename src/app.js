@@ -139,6 +139,8 @@ const analyticsRoutes = require('./routes/analyticsRoutes');
 console.log('✅ [DEBUG] Analytics routes loaded');
 const apiKeyRoutes = require('./routes/apiKeyRoutes');
 console.log('✅ [DEBUG] API Key routes loaded');
+const crmRoutes = require('./routes/crmRoutes');
+console.log('✅ [DEBUG] CRM routes loaded');
 console.log('🎉 [DEBUG] All routes loaded successfully!');
 
 // Import analytics middleware
@@ -180,6 +182,8 @@ app.use(`/api/${apiVersion}/api-keys`, apiKeyRoutes);
 app.use(`/api/${apiVersion}/billing`, billingRoutes);
 console.log(`🚀 [APP] Billing routes mounted at: /api/${apiVersion}/billing`);
 app.use(`/api/${apiVersion}/analytics`, analyticsRoutes);
+app.use(`/api/${apiVersion}/crm`, crmRoutes);
+console.log(`🚀 [APP] CRM routes mounted at: /api/${apiVersion}/crm`);
 
 // 404 handler
 app.use((req, res) => {
