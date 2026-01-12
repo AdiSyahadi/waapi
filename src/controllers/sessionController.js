@@ -471,6 +471,58 @@ const updateSession = async (req, res) => {
   }
 };
 
+/**
+ * Get all chats/conversations from WhatsApp session
+ */
+const getChats = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { limit, offset, filter, search } = req.query;
+
+    const session = await db.Session.findOne({
+      where: {
+        id,
+        user_id: req.user.id
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    // Check if session is connected
+    if (session.status !== 'connected') {
+      return res.status(400).json({
+        success: false,
+        message: 'Session is not connected. Please reconnect first.',
+        status: session.status
+      });
+    }
+
+    // Fetch chats from WhatsApp
+    const result = await whatsappService.fetchChats(session.session_id, {
+      limit,
+      offset,
+      filter,
+      search
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch chats',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createSession,
   getSessions,
@@ -479,5 +531,6 @@ module.exports = {
   reconnectSession,
   disconnectSession,
   deleteSession,
-  updateSession
+  updateSession,
+  getChats
 };

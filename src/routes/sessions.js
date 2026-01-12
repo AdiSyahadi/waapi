@@ -33,6 +33,7 @@ router.post('/', checkSubscriptionLimit('sessions'), createSessionValidation, va
 router.get('/', sessionController.getSessions);
 router.get('/:id', sessionController.getSession);
 router.get('/:id/qr', sessionController.getQRCode);
+router.get('/:id/chats', sessionController.getChats);
 router.post('/:id/reconnect', sessionController.reconnectSession);
 router.post('/:id/disconnect', sessionController.disconnectSession);
 router.put('/:id', updateSessionValidation, validate, sessionController.updateSession);

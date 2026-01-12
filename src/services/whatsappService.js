@@ -583,7 +583,194 @@ class WhatsAppService {
       throw error;
     }
   }
+
+  /**
+   * Fetch all chats/conversations from WhatsApp
+   */
+  /**
+   * Fetch all chats from WhatsApp
+   * Note: Baileys v7 doesn't have built-in store, so we'll fetch from database
+   * and update with live data when available
+   */
+  async fetchChats(sessionId, options = {}) {
+    try {
+      const session = this.sessions.get(sessionId);
+      if (!session || !session.socket) {
+        throw new Error('Session not found or not connected');
+      }
+
+      const sock = session.socket;
+      
+      // Baileys v7 doesn't provide a direct way to get all chats
+      // We'll need to fetch from database and enhance with live data
+      // For now, return data from our database
+      
+      const { Message } = db;
+      
+      // Get unique chat IDs from database
+      const messages = await Message.findAll({
+        where: { 
+          session_id: session.sessionRecord.id 
+        },
+        attributes: [
+          'to',
+          [db.Sequelize.fn('MAX', db.Sequelize.col('timestamp')), 'last_timestamp'],
+          [db.Sequelize.fn('COUNT', db.Sequelize.col('id')), 'message_count']
+        ],
+        group: ['to'],
+        order: [[db.Sequelize.literal('last_timestamp'), 'DESC']],
+        raw: true
+      });
+
+      // Get last message for each chat
+      const chatsWithLastMessage = await Promise.all(
+        messages.map(async (chat) => {
+          const lastMessage = await Message.findOne({
+            where: {
+              session_id: session.sessionRecord.id,
+              to: chat.to
+            },
+            order: [['timestamp', 'DESC']]
+          });
+
+          const isGroup = chat.to.endsWith('@g.us');
+          const phone = isGroup ? null : chat.to.split('@')[0];
+
+          return {
+            id: chat.to,
+            name: phone || 'Unknown', // We don't store names in DB yet
+            phone: phone,
+            lastMessage: lastMessage ? {
+              id: lastMessage.wa_message_id,
+              body: lastMessage.body,
+              timestamp: lastMessage.timestamp.getTime(),
+              timestampISO: lastMessage.timestamp.toISOString(),
+              fromMe: lastMessage.from_me,
+              type: lastMessage.type,
+              status: lastMessage.status
+            } : null,
+            unreadCount: 0, // Not tracked in database
+            isGroup: isGroup,
+            profilePicUrl: null,
+            timestamp: new Date(chat.last_timestamp).getTime(),
+            archived: false,
+            pinned: false,
+            muted: false,
+            messageCount: parseInt(chat.message_count)
+          };
+        })
+      );
+
+      let filteredChats = chatsWithLastMessage;
+
+      // Apply filters
+      if (options.filter === 'groups') {
+        filteredChats = filteredChats.filter(chat => chat.isGroup);
+      } else if (options.filter === 'personal') {
+        filteredChats = filteredChats.filter(chat => !chat.isGroup);
+      }
+
+      // Search by name or phone
+      if (options.search) {
+        const searchLower = options.search.toLowerCase();
+        filteredChats = filteredChats.filter(chat => 
+          (chat.name || '').toLowerCase().includes(searchLower) ||
+          (chat.phone || '').includes(options.search)
+        );
+      }
+
+      // Pagination
+      const limit = parseInt(options.limit) || 50;
+      const offset = parseInt(options.offset) || 0;
+      const hasMore = filteredChats.length > (offset + limit);
+      const paginatedChats = filteredChats.slice(offset, offset + limit);
+
+      return {
+        chats: paginatedChats,
+        count: paginatedChats.length,
+        total: filteredChats.length,
+        hasMore
+      };
+    } catch (error) {
+      logger.error(`Failed to fetch chats for ${sessionId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Fetch messages from specific chat
+   */
+  async fetchChatMessages(sessionId, chatId, options = {}) {
+    try {
+      const session = this.sessions.get(sessionId);
+      if (!session || !session.socket) {
+        throw new Error('Session not found or not connected');
+      }
+
+      const { Message } = db;
+      const limit = parseInt(options.limit) || 50;
+      const offset = parseInt(options.offset) || 0;
+
+      // Build where clause
+      const where = {
+        session_id: session.sessionRecord.id,
+        to: chatId
+      };
+
+      // Apply filters
+      if (options.type) {
+        where.type = options.type;
+      }
+
+      if (options.fromMe !== undefined) {
+        where.from_me = options.fromMe === 'true' || options.fromMe === true;
+      }
+
+      // Fetch messages from database
+      const messages = await Message.findAll({
+        where,
+        order: [['timestamp', 'DESC']],
+        limit,
+        offset
+      });
+
+      // Count total
+      const total = await Message.count({ where });
+
+      // Format messages
+      const formattedMessages = messages.map(msg => ({
+        id: msg.wa_message_id,
+        remoteJid: msg.to,
+        fromMe: msg.from_me,
+        timestamp: msg.timestamp.getTime(),
+        timestampISO: msg.timestamp.toISOString(),
+        pushName: msg.sender_name || null,
+        status: msg.status,
+        type: msg.type,
+        body: msg.body,
+        hasMedia: ['image', 'video', 'audio', 'document', 'sticker'].includes(msg.type),
+        mediaUrl: msg.media_url,
+        mediaType: ['image', 'video', 'audio', 'document', 'sticker'].includes(msg.type) ? msg.type : null,
+        quotedMsg: null // We don't store quoted messages in DB
+      }));
+
+      return {
+        chatId,
+        messages: formattedMessages,
+        count: formattedMessages.length,
+        total,
+        hasMore: (offset + limit) < total,
+        pagination: {
+          limit,
+          offset,
+          nextOffset: (offset + limit) < total ? offset + limit : null
+        }
+      };
+    } catch (error) {
+      logger.error(`Failed to fetch messages for ${sessionId}/${chatId}:`, error);
+      throw error;
+    }
+  }
 }
 
-// Export singleton instance
 module.exports = new WhatsAppService();

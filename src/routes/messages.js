@@ -133,6 +133,7 @@ router.put('/:sessionId/message/:messageId', editValidation, validate, messageCo
 
 // Get messages
 router.get('/:sessionId/messages', messageController.getMessages);
+router.get('/:sessionId/chats/:chatId/messages', messageController.getChatMessages);
 router.get('/:sessionId/check-number', messageController.checkNumber);
 
 module.exports = router;

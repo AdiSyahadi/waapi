@@ -1240,13 +1240,62 @@ const editMessage = async (req, res) => {
   }
 };
 
+/**
+ * Get messages from specific chat (fetch from WhatsApp)
+ */
+const getChatMessages = async (req, res) => {
+  try {
+    const { sessionId, chatId } = req.params;
+    const { limit, before, after, type, fromMe } = req.query;
+
+    // Find session
+    const session = await findSessionById(sessionId, req.user.id);
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    // Check if session is connected
+    if (session.status !== 'connected') {
+      return res.status(400).json({
+        success: false,
+        message: 'Session is not connected. Please reconnect first.',
+        status: session.status
+      });
+    }
+
+    // Fetch messages from WhatsApp
+    const result = await whatsappService.fetchChatMessages(session.session_id, chatId, {
+      limit,
+      before,
+      after,
+      type,
+      fromMe
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch chat messages',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   sendTextMessage,
   sendMediaMessage,
-  getMessages,
-  checkNumber,
   sendLocation,
   sendContact,
+  getMessages,
+  getChatMessages,
   sendButton,
   sendList,
   sendPoll,
@@ -1254,5 +1303,6 @@ module.exports = {
   forwardMessage,
   deleteMessage,
   reactMessage,
-  editMessage
+  editMessage,
+  checkNumber
 };
