@@ -643,8 +643,8 @@ class WhatsAppService {
             lastMessage: lastMessage ? {
               id: lastMessage.message_id,
               body: lastMessage.content,
-              timestamp: lastMessage.timestamp.getTime(),
-              timestampISO: lastMessage.timestamp.toISOString(),
+              timestamp: lastMessage.timestamp instanceof Date ? lastMessage.timestamp.getTime() : lastMessage.timestamp,
+              timestampISO: lastMessage.timestamp instanceof Date ? lastMessage.timestamp.toISOString() : new Date(lastMessage.timestamp).toISOString(),
               fromMe: lastMessage.from_me,
               type: lastMessage.type,
               status: lastMessage.status
