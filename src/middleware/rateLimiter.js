@@ -34,11 +34,11 @@ const keyGenerator = (req) => {
 
 /**
  * Global API Rate Limiter
- * 100 requests per 15 menit per user/API key
+ * 1000 requests per 15 menit per user/API key (increased for development)
  */
 const apiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // 100 requests per window
+  max: 1000, // 1000 requests per window (increased from 100)
   standardHeaders: true, // Return rate limit info in headers
   legacyHeaders: false,
   keyGenerator,
@@ -53,13 +53,16 @@ const apiLimiter = rateLimit({
       success: false,
       message: 'Too many requests, please try again later',
       retryAfter: Math.ceil(15 * 60), // seconds
-      limit: 100,
+      limit: 1000,
       window: '15 minutes'
     });
   },
   skip: (req) => {
-    // Skip rate limiting for health check
-    return req.path === '/health';
+    // Skip rate limiting for health check and read-only operations
+    if (req.path === '/health') return true;
+    // Skip for authenticated GET requests (dashboard reads)
+    if (req.method === 'GET' && (req.user || req.apiKey)) return true;
+    return false;
   }
 });
 
