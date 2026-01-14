@@ -529,14 +529,22 @@ const getChats = async (req, res) => {
  */
 const resyncHistory = async (req, res) => {
   try {
-    const { sessionId } = req.params;
+    // FIXED: Route parameter is :id, not :sessionId
+    const sessionIdParam = req.params.id;
+
+    if (!sessionIdParam) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID parameter is required'
+      });
+    }
 
     // Find session
     const session = await db.Session.findOne({
       where: {
         [db.Sequelize.Op.or]: [
-          { session_id: sessionId },
-          { id: sessionId }
+          { session_id: sessionIdParam },
+          { id: sessionIdParam }
         ],
         user_id: req.user.id
       }
@@ -552,7 +560,11 @@ const resyncHistory = async (req, res) => {
     if (session.status !== 'connected') {
       return res.status(400).json({
         success: false,
-        message: 'Session must be connected to resync history'
+        message: 'Session must be connected to resync history',
+        data: {
+          sessionId: session.session_id,
+          currentStatus: session.status
+        }
       });
     }
 
@@ -581,14 +593,22 @@ const resyncHistory = async (req, res) => {
  */
 const getSyncStatus = async (req, res) => {
   try {
-    const { sessionId } = req.params;
+    // FIXED: Route parameter is :id, not :sessionId
+    const sessionIdParam = req.params.id;
 
-    // Find session
+    if (!sessionIdParam) {
+      return res.status(400).json({
+        success: false,
+        message: 'Session ID parameter is required'
+      });
+    }
+
+    // Find session - support both session_id and UUID id
     const session = await db.Session.findOne({
       where: {
         [db.Sequelize.Op.or]: [
-          { session_id: sessionId },
-          { id: sessionId }
+          { session_id: sessionIdParam },
+          { id: sessionIdParam }
         ],
         user_id: req.user.id
       }
@@ -601,7 +621,15 @@ const getSyncStatus = async (req, res) => {
       });
     }
 
-    // Get message statistics
+    // Verify session.id is valid UUID before querying
+    if (!session.id) {
+      return res.status(500).json({
+        success: false,
+        message: 'Invalid session record - missing ID'
+      });
+    }
+
+    // Get message statistics using proper Sequelize query
     const [messageStats] = await db.sequelize.query(`
       SELECT 
         COUNT(*) as total_messages,
@@ -620,10 +648,13 @@ const getSyncStatus = async (req, res) => {
       type: db.Sequelize.QueryTypes.SELECT
     });
 
-    // Get chat count
-    const chatCount = await db.Chat.count({
-      where: { session_id: session.id }
-    });
+    // Get chat count - check if Chat model exists
+    let chatCount = 0;
+    if (db.Chat) {
+      chatCount = await db.Chat.count({
+        where: { session_id: session.id }
+      });
+    }
 
     const stats = messageStats || {};
     
