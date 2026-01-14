@@ -523,6 +523,187 @@ const getChats = async (req, res) => {
   }
 };
 
+/**
+ * Resync history for a session
+ * This will disconnect and reconnect to trigger fresh history sync from WhatsApp
+ */
+const resyncHistory = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    // Find session
+    const session = await db.Session.findOne({
+      where: {
+        [db.Sequelize.Op.or]: [
+          { session_id: sessionId },
+          { id: sessionId }
+        ],
+        user_id: req.user.id
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    if (session.status !== 'connected') {
+      return res.status(400).json({
+        success: false,
+        message: 'Session must be connected to resync history'
+      });
+    }
+
+    const result = await whatsappService.resyncHistory(session.session_id);
+
+    res.json({
+      success: true,
+      message: result.message,
+      data: {
+        sessionId: session.session_id,
+        status: 'resyncing'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to resync history',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Get sync status for a session
+ * Returns message counts and sync status
+ */
+const getSyncStatus = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+
+    // Find session
+    const session = await db.Session.findOne({
+      where: {
+        [db.Sequelize.Op.or]: [
+          { session_id: sessionId },
+          { id: sessionId }
+        ],
+        user_id: req.user.id
+      }
+    });
+
+    if (!session) {
+      return res.status(404).json({
+        success: false,
+        message: 'Session not found'
+      });
+    }
+
+    // Get message statistics
+    const [messageStats] = await db.sequelize.query(`
+      SELECT 
+        COUNT(*) as total_messages,
+        SUM(CASE WHEN from_me = 1 THEN 1 ELSE 0 END) as outgoing_messages,
+        SUM(CASE WHEN from_me = 0 THEN 1 ELSE 0 END) as incoming_messages,
+        SUM(CASE WHEN content IS NOT NULL AND content != '' THEN 1 ELSE 0 END) as messages_with_content,
+        SUM(CASE WHEN content IS NULL OR content = '' THEN 1 ELSE 0 END) as messages_without_content,
+        SUM(CASE WHEN JSON_EXTRACT(metadata, '$.is_history') = true THEN 1 ELSE 0 END) as history_messages,
+        COUNT(DISTINCT remote_jid) as unique_chats,
+        MIN(timestamp) as oldest_message,
+        MAX(timestamp) as newest_message
+      FROM messages
+      WHERE session_id = :sessionId
+    `, {
+      replacements: { sessionId: session.id },
+      type: db.Sequelize.QueryTypes.SELECT
+    });
+
+    // Get chat count
+    const chatCount = await db.Chat.count({
+      where: { session_id: session.id }
+    });
+
+    const stats = messageStats || {};
+    
+    res.json({
+      success: true,
+      data: {
+        sessionId: session.session_id,
+        status: session.status,
+        lastConnected: session.last_connected_at,
+        sync: {
+          totalMessages: parseInt(stats.total_messages) || 0,
+          outgoingMessages: parseInt(stats.outgoing_messages) || 0,
+          incomingMessages: parseInt(stats.incoming_messages) || 0,
+          messagesWithContent: parseInt(stats.messages_with_content) || 0,
+          messagesWithoutContent: parseInt(stats.messages_without_content) || 0,
+          historyMessages: parseInt(stats.history_messages) || 0,
+          uniqueChats: parseInt(stats.unique_chats) || 0,
+          persistentChats: chatCount,
+          contentPercentage: stats.total_messages > 0 
+            ? Math.round((stats.messages_with_content / stats.total_messages) * 100) 
+            : 0,
+          dateRange: {
+            oldest: stats.oldest_message ? new Date(parseInt(stats.oldest_message)).toISOString() : null,
+            newest: stats.newest_message ? new Date(parseInt(stats.newest_message)).toISOString() : null
+          }
+        },
+        recommendations: []
+      }
+    });
+
+    // Add recommendations based on stats
+    const recommendations = [];
+    if (stats.messages_without_content > 0 && (stats.messages_without_content / stats.total_messages) > 0.1) {
+      recommendations.push({
+        type: 'warning',
+        message: `${Math.round((stats.messages_without_content / stats.total_messages) * 100)}% of messages have empty content. Try resync history.`
+      });
+    }
+    if (stats.history_messages === 0 && stats.total_messages > 0) {
+      recommendations.push({
+        type: 'info',
+        message: 'No history messages synced yet. Reconnect session to trigger history sync.'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        sessionId: session.session_id,
+        status: session.status,
+        lastConnected: session.last_connected_at,
+        sync: {
+          totalMessages: parseInt(stats.total_messages) || 0,
+          outgoingMessages: parseInt(stats.outgoing_messages) || 0,
+          incomingMessages: parseInt(stats.incoming_messages) || 0,
+          messagesWithContent: parseInt(stats.messages_with_content) || 0,
+          messagesWithoutContent: parseInt(stats.messages_without_content) || 0,
+          historyMessages: parseInt(stats.history_messages) || 0,
+          uniqueChats: parseInt(stats.unique_chats) || 0,
+          persistentChats: chatCount,
+          contentPercentage: stats.total_messages > 0 
+            ? Math.round((stats.messages_with_content / stats.total_messages) * 100) 
+            : 0,
+          dateRange: {
+            oldest: stats.oldest_message ? new Date(parseInt(stats.oldest_message)).toISOString() : null,
+            newest: stats.newest_message ? new Date(parseInt(stats.newest_message)).toISOString() : null
+          }
+        },
+        recommendations
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get sync status',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   createSession,
   getSessions,
@@ -532,5 +713,7 @@ module.exports = {
   disconnectSession,
   deleteSession,
   updateSession,
-  getChats
+  getChats,
+  resyncHistory,
+  getSyncStatus
 };

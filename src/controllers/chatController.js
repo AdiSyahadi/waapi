@@ -1,17 +1,19 @@
 const db = require('../models');
 const whatsappService = require('../services/whatsappService');
 const messageService = require('../services/messageService');
+const searchService = require('../services/searchService');
 const path = require('path');
 const fs = require('fs');
 
 /**
  * Get chat list - includes both personal chats AND groups
  * Fixed: Previously only returned groups via groupFetchAllParticipating()
+ * Fixed #7: Uses persistent Chat table for unread counts (survives restart)
  */
 const getChatList = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const { filter = 'all', limit = 50, offset = 0 } = req.query;
+    const { filter = 'all', limit = 50, offset = 0, archived = 'false' } = req.query;
 
     const session = await db.Session.findOne({
       where: {
@@ -28,86 +30,69 @@ const getChatList = async (req, res) => {
     }
 
     // Build filter for chat type
-    let jidFilter = {};
+    const chatWhere = {
+      session_id: session.id,
+      is_archived: archived === 'true'
+    };
+    
     if (filter === 'personal') {
-      jidFilter = { remote_jid: { [db.Sequelize.Op.like]: '%@s.whatsapp.net' } };
+      chatWhere.is_group = false;
     } else if (filter === 'groups') {
-      jidFilter = { remote_jid: { [db.Sequelize.Op.like]: '%@g.us' } };
+      chatWhere.is_group = true;
     }
 
-    // Get unique chats from database with aggregated data
-    const chats = await db.Message.findAll({
-      where: {
-        session_id: session.id,
-        ...jidFilter
-      },
-      attributes: [
-        'remote_jid',
-        [db.Sequelize.fn('MAX', db.Sequelize.col('timestamp')), 'last_timestamp'],
-        [db.Sequelize.fn('COUNT', db.Sequelize.col('id')), 'message_count'],
-        [db.Sequelize.fn('SUM', db.Sequelize.literal("CASE WHEN status = 'received' AND from_me = false THEN 1 ELSE 0 END")), 'unread_count']
+    // Fix #7: Get chats from persistent Chat table (includes unread_count that survives restart)
+    const chats = await db.Chat.findAll({
+      where: chatWhere,
+      order: [
+        ['is_pinned', 'DESC'],
+        ['last_message_at', 'DESC']
       ],
-      group: ['remote_jid'],
-      order: [[db.Sequelize.literal('last_timestamp'), 'DESC']],
       limit: parseInt(limit),
-      offset: parseInt(offset),
-      raw: true
+      offset: parseInt(offset)
     });
 
-    // Get last message for each chat
+    // Get contact info for personal chats
     const chatsWithDetails = await Promise.all(
       chats.map(async (chat) => {
-        const lastMessage = await db.Message.findOne({
-          where: {
-            session_id: session.id,
-            remote_jid: chat.remote_jid
-          },
-          order: [['timestamp', 'DESC']]
-        });
-
-        const isGroup = chat.remote_jid.endsWith('@g.us');
-        const phone = isGroup ? null : chat.remote_jid.split('@')[0];
-
         // Try to get contact info from contacts table
         let contactInfo = null;
-        if (!isGroup) {
+        if (!chat.is_group && chat.phone) {
           contactInfo = await db.Contact.findOne({
             where: {
               session_id: session.id,
-              phone: phone
+              phone: chat.phone
             }
           });
         }
 
         return {
-          id: chat.remote_jid,
-          jid: chat.remote_jid,
-          name: contactInfo?.custom_name || contactInfo?.push_name || phone || 'Unknown',
-          phone: phone,
-          isGroup: isGroup,
-          unreadCount: parseInt(chat.unread_count) || 0,
-          messageCount: parseInt(chat.message_count) || 0,
-          timestamp: chat.last_timestamp,
-          lastMessage: lastMessage ? {
-            id: lastMessage.message_id,
-            body: lastMessage.content,
-            type: lastMessage.type,
-            fromMe: lastMessage.from_me,
-            status: lastMessage.status,
-            timestamp: lastMessage.timestamp
-          } : null
+          // Fix #6: Consistent ID format - use jid as primary identifier
+          id: chat.jid,
+          jid: chat.jid,
+          name: contactInfo?.custom_name || contactInfo?.push_name || chat.name || chat.phone || 'Unknown',
+          phone: chat.phone,
+          isGroup: chat.is_group,
+          // Fix #7: Persistent unread count from database
+          unreadCount: chat.unread_count || 0,
+          isArchived: chat.is_archived,
+          isPinned: chat.is_pinned,
+          isMuted: chat.is_muted,
+          timestamp: chat.last_message_at,
+          lastMessage: chat.last_message_preview ? {
+            preview: chat.last_message_preview,
+            type: chat.last_message_type,
+            fromMe: chat.last_message_from_me,
+            timestamp: chat.last_message_at
+          } : null,
+          profilePictureUrl: chat.profile_picture_url
         };
       })
     );
 
     // Get total count for pagination
-    const totalCount = await db.Message.count({
-      where: {
-        session_id: session.id,
-        ...jidFilter
-      },
-      distinct: true,
-      col: 'remote_jid'
+    const totalCount = await db.Chat.count({
+      where: chatWhere
     });
 
     res.json({
@@ -350,17 +335,28 @@ const getConversation = async (req, res) => {
 };
 
 /**
- * Search messages
+ * Search messages - Uses FULLTEXT search for better performance
+ * Fixes Issue #9: Basic LIKE search was slow and case-sensitive
  */
 const searchMessages = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const { query, jid, type, from_date, to_date, limit = 50 } = req.query;
+    const { 
+      query, 
+      jid, 
+      type, 
+      from_date, 
+      to_date, 
+      from_me,
+      mode = 'natural',
+      limit = 50,
+      offset = 0
+    } = req.query;
 
-    if (!query) {
+    if (!query || query.trim().length < 2) {
       return res.status(400).json({
         success: false,
-        message: 'Query is required'
+        message: 'Query is required (minimum 2 characters)'
       });
     }
 
@@ -378,42 +374,26 @@ const searchMessages = async (req, res) => {
       });
     }
 
-    const where = {
-      session_id: session.id,
-      content: { [db.Sequelize.Op.like]: `%${query}%` }
-    };
-
-    if (jid) {
-      where.remote_jid = jid;
-    }
-
-    if (type) {
-      where.type = type;
-    }
-
-    if (from_date) {
-      where.timestamp = { [db.Sequelize.Op.gte]: new Date(from_date).getTime() };
-    }
-
-    if (to_date) {
-      where.timestamp = {
-        ...where.timestamp,
-        [db.Sequelize.Op.lte]: new Date(to_date).getTime()
-      };
-    }
-
-    const messages = await db.Message.findAll({
-      where,
+    // Use the new search service with FULLTEXT support
+    const results = await searchService.searchMessages({
+      sessionId: session.id,
+      query: query.trim(),
+      jid,
+      type,
+      fromDate: from_date,
+      toDate: to_date,
+      fromMe: from_me === 'true' ? true : from_me === 'false' ? false : undefined,
+      mode,
       limit: parseInt(limit),
-      order: [['timestamp', 'DESC']]
+      offset: parseInt(offset)
     });
 
     res.json({
       success: true,
       data: {
         query,
-        results: messages,
-        count: messages.length
+        mode: results.fallback ? 'like' : mode,
+        ...results
       }
     });
   } catch (error) {
@@ -472,6 +452,22 @@ const markAsRead = async (req, res) => {
     } else {
       await sock.chatModify({ markRead: true }, jid);
     }
+
+    // Fix #7: Reset persistent unread count in Chat table
+    await db.Chat.markAsRead(session.id, jid);
+
+    // Also update messages status in database
+    await db.Message.update(
+      { status: 'read', read_at: new Date() },
+      {
+        where: {
+          session_id: session.id,
+          remote_jid: jid,
+          from_me: false,
+          status: { [db.Sequelize.Op.ne]: 'read' }
+        }
+      }
+    );
 
     res.json({
       success: true,

@@ -35,8 +35,10 @@ router.get('/', sessionController.getSessions);
 router.get('/:id', sessionController.getSession);
 router.get('/:id/qr', sessionController.getQRCode);
 router.get('/:id/chats', sessionController.getChats);
+router.get('/:id/sync-status', sessionController.getSyncStatus);
 router.post('/:id/reconnect', sessionController.reconnectSession);
 router.post('/:id/disconnect', sessionController.disconnectSession);
+router.post('/:id/resync-history', sessionController.resyncHistory);
 router.put('/:id', updateSessionValidation, validate, sessionController.updateSession);
 router.delete('/:id', sessionController.deleteSession);
 

@@ -68,13 +68,35 @@ class WhatsAppService {
           connectTimeoutMs: 60000,
           keepAliveIntervalMs: 30000,
           defaultQueryTimeoutMs: 60000,
+          // Enable history sync to receive past messages
+          syncFullHistory: true,
+          // CRITICAL FIX: Properly implement getMessage to return stored messages
+          // This is called by Baileys to decrypt messages from history
           getMessage: async (key) => {
             try {
-              // Return message from database if needed
-              return { conversation: '' };
+              // Try to find message in database by message_id
+              const storedMsg = await db.Message.findOne({
+                where: { message_id: key.id },
+                attributes: ['content', 'type', 'metadata']
+              });
+              
+              if (storedMsg) {
+                // Check if we have raw message stored in metadata
+                if (storedMsg.metadata?.raw_message) {
+                  return storedMsg.metadata.raw_message;
+                }
+                // Fallback: return content as conversation
+                if (storedMsg.content) {
+                  return { conversation: storedMsg.content };
+                }
+              }
+              
+              // Return undefined to let Baileys know message not found
+              // This is better than returning empty object
+              return undefined;
             } catch (e) {
-              logger.error(`[createSession] getMessage error:`, e);
-              return { conversation: '' };
+              logger.error(`[getMessage] Error fetching message ${key.id}:`, e.message);
+              return undefined;
             }
           }
         });
@@ -234,6 +256,35 @@ class WhatsAppService {
         await this.handlePresenceUpdate(sessionId, presence, sessionRecord);
       } catch (error) {
         logger.error(`Presence update handler error for ${sessionId}:`, error);
+      }
+    });
+
+    // CRITICAL FIX: Handle history sync to import past messages
+    // This event fires when WhatsApp syncs chat history after connection
+    sock.ev.on('messaging-history.set', async ({ messages, chats, isLatest }) => {
+      try {
+        logger.info(`[${sessionId}] History sync: ${messages?.length || 0} messages, ${chats?.length || 0} chats, isLatest: ${isLatest}`);
+        await this.handleHistorySync(sessionId, messages, chats, sessionRecord);
+      } catch (error) {
+        logger.error(`History sync handler error for ${sessionId}:`, error);
+      }
+    });
+
+    // Handle chat updates (for metadata like unread count, archive status)
+    sock.ev.on('chats.update', async (updates) => {
+      try {
+        await this.handleChatUpdates(sessionId, updates, sessionRecord);
+      } catch (error) {
+        logger.error(`Chat update handler error for ${sessionId}:`, error);
+      }
+    });
+
+    // Handle new chats
+    sock.ev.on('chats.upsert', async (chats) => {
+      try {
+        await this.handleNewChats(sessionId, chats, sessionRecord);
+      } catch (error) {
+        logger.error(`Chat upsert handler error for ${sessionId}:`, error);
       }
     });
   }
@@ -420,6 +471,35 @@ class WhatsAppService {
             logger.debug(`Contact update skipped for ${phone}:`, err.message);
           });
         }
+
+        // Fix #7: Update persistent Chat record (unread count, last message)
+        try {
+          if (!msg.key.fromMe) {
+            // Incoming message - increment unread count
+            await db.Chat.getOrCreate(sessionRecord.id, msg.key.remoteJid, {
+              name: msg.pushName
+            });
+            await db.Chat.incrementUnread(sessionRecord.id, msg.key.remoteJid);
+          }
+          
+          // Update last message for both incoming and outgoing
+          await db.Chat.updateLastMessage(sessionRecord.id, msg.key.remoteJid, messageData);
+        } catch (chatErr) {
+          logger.debug('Chat update error:', chatErr.message);
+        }
+
+        // Fix #8: Track conversation metrics for SLA
+        try {
+          if (!msg.key.fromMe) {
+            // Customer message - start or update conversation
+            await db.ConversationMetrics.recordCustomerMessage(
+              sessionRecord.id,
+              msg.key.remoteJid
+            );
+          }
+        } catch (metricsErr) {
+          logger.debug('Metrics update error:', metricsErr.message);
+        }
       }
     } catch (error) {
       logger.error(`Message handler error for ${sessionId}:`, error);
@@ -525,6 +605,182 @@ class WhatsAppService {
       }
     } catch (error) {
       logger.error(`Presence update handler error for ${sessionId}:`, error);
+    }
+  }
+
+  /**
+   * CRITICAL FIX: Handle history sync from WhatsApp
+   * This imports messages from chat history when session connects
+   */
+  async handleHistorySync(sessionId, messages, chats, sessionRecord) {
+    try {
+      const startTime = Date.now();
+      let importedCount = 0;
+      let errorCount = 0;
+
+      // Process messages in batches to avoid overwhelming the database
+      const batchSize = 100;
+      
+      if (messages && messages.length > 0) {
+        logger.info(`[${sessionId}] Starting history import: ${messages.length} messages`);
+        
+        for (let i = 0; i < messages.length; i += batchSize) {
+          const batch = messages.slice(i, i + batchSize);
+          
+          await Promise.all(batch.map(async (msg) => {
+            try {
+              if (!msg.message) return;
+              
+              const messageData = {
+                session_id: sessionRecord.id,
+                message_id: msg.key.id,
+                remote_jid: msg.key.remoteJid,
+                from_me: msg.key.fromMe || false,
+                timestamp: parseInt(msg.messageTimestamp) || Date.now(),
+                type: this.getMessageType(msg.message),
+                content: this.extractMessageContent(msg.message),
+                status: msg.key.fromMe ? 'sent' : 'delivered',
+                metadata: {
+                  // Store raw message for getMessage callback (CRITICAL!)
+                  raw_message: msg.message,
+                  push_name: msg.pushName,
+                  message_timestamp: msg.messageTimestamp,
+                  broadcast: msg.broadcast || false,
+                  participant: msg.participant || null,
+                  is_history: true
+                }
+              };
+
+              // Upsert to avoid duplicates
+              await db.Message.upsert(messageData, {
+                conflictFields: ['message_id', 'session_id']
+              });
+              
+              importedCount++;
+            } catch (msgErr) {
+              errorCount++;
+              logger.debug(`[${sessionId}] Failed to import message ${msg.key?.id}:`, msgErr.message);
+            }
+          }));
+          
+          // Log progress for large imports
+          if (messages.length > 500 && (i + batchSize) % 500 === 0) {
+            logger.info(`[${sessionId}] History import progress: ${Math.min(i + batchSize, messages.length)}/${messages.length}`);
+          }
+        }
+      }
+
+      // Process chats for persistent Chat table
+      if (chats && chats.length > 0) {
+        for (const chat of chats) {
+          try {
+            const isGroup = chat.id?.endsWith('@g.us');
+            const phone = isGroup ? null : chat.id?.split('@')[0];
+            
+            await db.Chat.upsert({
+              session_id: sessionRecord.id,
+              jid: chat.id,
+              name: chat.name || chat.pushName || phone || 'Unknown',
+              phone: phone,
+              is_group: isGroup,
+              unread_count: chat.unreadCount || 0,
+              is_archived: chat.archived || false,
+              is_pinned: chat.pinned ? true : false,
+              is_muted: chat.mute ? true : false,
+              last_message_at: chat.conversationTimestamp 
+                ? new Date(parseInt(chat.conversationTimestamp) * 1000) 
+                : new Date()
+            }, {
+              conflictFields: ['session_id', 'jid']
+            });
+          } catch (chatErr) {
+            logger.debug(`[${sessionId}] Failed to import chat ${chat.id}:`, chatErr.message);
+          }
+        }
+      }
+
+      const duration = Date.now() - startTime;
+      logger.info(`[${sessionId}] History sync completed: ${importedCount} messages, ${chats?.length || 0} chats in ${duration}ms (${errorCount} errors)`);
+
+      // Trigger webhook for history sync complete
+      await this.triggerWebhook(sessionRecord, 'history.synced', {
+        messagesImported: importedCount,
+        chatsImported: chats?.length || 0,
+        errors: errorCount,
+        durationMs: duration
+      });
+
+    } catch (error) {
+      logger.error(`[${sessionId}] History sync error:`, error);
+    }
+  }
+
+  /**
+   * Handle chat updates (unread count, archive, pin, mute)
+   */
+  async handleChatUpdates(sessionId, updates, sessionRecord) {
+    try {
+      for (const update of updates) {
+        const updateData = {};
+        
+        if (update.unreadCount !== undefined) {
+          updateData.unread_count = update.unreadCount;
+        }
+        if (update.archived !== undefined) {
+          updateData.is_archived = update.archived;
+        }
+        if (update.pinned !== undefined) {
+          updateData.is_pinned = update.pinned ? true : false;
+        }
+        if (update.mute !== undefined) {
+          updateData.is_muted = update.mute ? true : false;
+        }
+        if (update.conversationTimestamp) {
+          updateData.last_message_at = new Date(parseInt(update.conversationTimestamp) * 1000);
+        }
+        
+        if (Object.keys(updateData).length > 0) {
+          await db.Chat.update(updateData, {
+            where: {
+              session_id: sessionRecord.id,
+              jid: update.id
+            }
+          });
+        }
+      }
+    } catch (error) {
+      logger.error(`[${sessionId}] Chat update handler error:`, error);
+    }
+  }
+
+  /**
+   * Handle new chats
+   */
+  async handleNewChats(sessionId, chats, sessionRecord) {
+    try {
+      for (const chat of chats) {
+        const isGroup = chat.id?.endsWith('@g.us');
+        const phone = isGroup ? null : chat.id?.split('@')[0];
+        
+        await db.Chat.upsert({
+          session_id: sessionRecord.id,
+          jid: chat.id,
+          name: chat.name || chat.pushName || phone || 'Unknown',
+          phone: phone,
+          is_group: isGroup,
+          unread_count: chat.unreadCount || 0,
+          is_archived: chat.archived || false,
+          is_pinned: chat.pinned ? true : false,
+          is_muted: chat.mute ? true : false,
+          last_message_at: chat.conversationTimestamp 
+            ? new Date(parseInt(chat.conversationTimestamp) * 1000) 
+            : new Date()
+        }, {
+          conflictFields: ['session_id', 'jid']
+        });
+      }
+    } catch (error) {
+      logger.error(`[${sessionId}] New chat handler error:`, error);
     }
   }
 
@@ -990,22 +1246,26 @@ class WhatsAppService {
       // Count total
       const total = await Message.count({ where });
 
-      // Format messages
-      const formattedMessages = messages.map(msg => ({
-        id: msg.message_id,
-        remoteJid: msg.remote_jid,
-        fromMe: msg.from_me,
-        timestamp: msg.timestamp instanceof Date ? msg.timestamp.getTime() : msg.timestamp,
-        timestampISO: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : new Date(msg.timestamp).toISOString(),
-        pushName: null, // Not stored in database
-        status: msg.status,
-        type: msg.type,
-        body: msg.content,
-        hasMedia: ['image', 'video', 'audio', 'document', 'sticker'].includes(msg.type),
-        mediaUrl: msg.media_url,
-        mediaType: ['image', 'video', 'audio', 'document', 'sticker'].includes(msg.type) ? msg.type : null,
-        quotedMsg: null // We don't store quoted messages in DB
-      }));
+      // Format messages with pushName from metadata
+      const formattedMessages = messages.map(msg => {
+        const metadata = msg.metadata || {};
+        return {
+          id: msg.message_id,
+          remoteJid: msg.remote_jid,
+          fromMe: msg.from_me,
+          timestamp: msg.timestamp instanceof Date ? msg.timestamp.getTime() : msg.timestamp,
+          timestampISO: msg.timestamp instanceof Date ? msg.timestamp.toISOString() : new Date(msg.timestamp).toISOString(),
+          pushName: metadata.push_name || null,
+          status: msg.status,
+          type: msg.type,
+          body: msg.content,
+          hasMedia: ['image', 'video', 'audio', 'document', 'sticker'].includes(msg.type),
+          mediaUrl: msg.media_url,
+          mediaType: ['image', 'video', 'audio', 'document', 'sticker'].includes(msg.type) ? msg.type : null,
+          quotedMsg: null,
+          isHistory: metadata.is_history || false
+        };
+      });
 
       return {
         chatId,
@@ -1021,6 +1281,138 @@ class WhatsAppService {
       };
     } catch (error) {
       logger.error(`Failed to fetch messages for ${sessionId}/${chatId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Load more messages from WhatsApp directly (not from database)
+   * Use this when database doesn't have enough history
+   */
+  async loadMoreMessages(sessionId, chatId, options = {}) {
+    try {
+      const session = this.sessions.get(sessionId);
+      if (!session || !session.socket) {
+        throw new Error('Session not found or not connected');
+      }
+
+      const sock = session.socket;
+      const limit = parseInt(options.limit) || 50;
+      
+      // Use Baileys to fetch messages directly from WhatsApp
+      // fetchMessageHistory requires a cursor for pagination
+      let cursor = undefined;
+      
+      if (options.before) {
+        // Get message from DB to use as cursor
+        const beforeMsg = await db.Message.findOne({
+          where: { message_id: options.before }
+        });
+        
+        if (beforeMsg) {
+          cursor = {
+            before: {
+              id: beforeMsg.message_id,
+              fromMe: beforeMsg.from_me
+            }
+          };
+        }
+      }
+
+      logger.info(`[${sessionId}] Loading more messages for ${chatId}, limit: ${limit}`);
+
+      // Fetch messages from WhatsApp using store (if available) or manual fetch
+      const messages = [];
+      
+      // Try to trigger a message load by reading messages
+      // This uses Baileys' internal message fetching
+      try {
+        // This method is not always available, depends on Baileys version
+        if (sock.fetchMessagesFromWA) {
+          const fetched = await sock.fetchMessagesFromWA(chatId, limit);
+          if (fetched && fetched.length > 0) {
+            // Store fetched messages in database
+            for (const msg of fetched) {
+              if (!msg.message) continue;
+              
+              const messageData = {
+                session_id: session.sessionRecord.id,
+                message_id: msg.key.id,
+                remote_jid: msg.key.remoteJid,
+                from_me: msg.key.fromMe || false,
+                timestamp: parseInt(msg.messageTimestamp) || Date.now(),
+                type: this.getMessageType(msg.message),
+                content: this.extractMessageContent(msg.message),
+                status: msg.key.fromMe ? 'sent' : 'delivered',
+                metadata: {
+                  raw_message: msg.message,
+                  push_name: msg.pushName,
+                  is_history: true,
+                  loaded_at: new Date().toISOString()
+                }
+              };
+
+              await db.Message.upsert(messageData, {
+                conflictFields: ['message_id', 'session_id']
+              });
+              messages.push(messageData);
+            }
+          }
+        }
+      } catch (fetchErr) {
+        logger.debug(`[${sessionId}] Direct fetch not available:`, fetchErr.message);
+      }
+
+      return {
+        chatId,
+        loaded: messages.length,
+        message: messages.length > 0 
+          ? `Loaded ${messages.length} additional messages`
+          : 'No additional messages available. Messages are synced automatically when session connects.'
+      };
+    } catch (error) {
+      logger.error(`Failed to load more messages for ${sessionId}/${chatId}:`, error);
+      throw error;
+    }
+  }
+
+  /**
+   * Force re-sync history for a session
+   * Disconnects and reconnects to trigger full history sync
+   */
+  async resyncHistory(sessionId) {
+    try {
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        throw new Error('Session not found');
+      }
+
+      logger.info(`[${sessionId}] Starting history re-sync`);
+
+      // Mark existing messages as pre-sync
+      await db.Message.update(
+        { metadata: db.Sequelize.fn('JSON_SET', db.Sequelize.col('metadata'), '$.pre_sync', true) },
+        { where: { session_id: session.sessionRecord.id } }
+      );
+
+      // Reconnect to trigger fresh history sync
+      const sock = session.socket;
+      if (sock) {
+        // End current connection
+        sock.end();
+      }
+
+      // Wait a moment then reconnect
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      await this.createSession(sessionId, session.sessionRecord);
+
+      return {
+        success: true,
+        message: 'History re-sync initiated. Messages will be imported in the background.'
+      };
+    } catch (error) {
+      logger.error(`Failed to resync history for ${sessionId}:`, error);
       throw error;
     }
   }
