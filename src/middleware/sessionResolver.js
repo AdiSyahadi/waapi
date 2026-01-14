@@ -13,7 +13,7 @@
  */
 
 const db = require('../models');
-const logger = require('../utils/logger');
+const logger = require('../config/logger');
 
 /**
  * Middleware to resolve session from various ID formats

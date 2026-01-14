@@ -12,7 +12,7 @@
 
 const db = require('../models');
 const whatsappService = require('../services/whatsappService');
-const logger = require('../utils/logger');
+const logger = require('../config/logger');
 const { v4: uuidv4 } = require('uuid');
 
 /**
