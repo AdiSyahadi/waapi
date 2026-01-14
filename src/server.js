@@ -45,15 +45,17 @@ const restoreWhatsAppSessions = async () => {
         
         // Small delay between session restores to avoid rate limiting
         await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        logger.info(`✅ Restore initiated for: ${session.name}`);
       } catch (sessionError) {
         logger.error(`❌ Error restoring session ${session.name}:`, sessionError.message);
         await session.update({ status: 'disconnected' }).catch(() => {});
       }
     }
     
-    logger.info('✅ Session restoration initiated');
+    logger.info('✅ Session restoration process completed');
   } catch (error) {
-    logger.error('❌ Error during session restoration:', error.message);
+    logger.error('❌ Error during session restoration:', error.message, error.stack);
   }
 };
 
@@ -79,13 +81,18 @@ const startServer = async () => {
     }
 
     // Start Express server
-    app.listen(PORT, async () => {
+    app.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
       logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
       logger.info(`API URL: ${process.env.APP_URL}/api/v1`);
       
       // Auto-restore WhatsApp sessions after server is ready
-      await restoreWhatsAppSessions();
+      // Use setImmediate to ensure it runs after server is fully ready
+      setImmediate(() => {
+        restoreWhatsAppSessions().catch(err => {
+          logger.error('Session restoration failed:', err);
+        });
+      });
     });
   } catch (error) {
     logger.error('Failed to start server:', error);
