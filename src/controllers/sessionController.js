@@ -568,6 +568,39 @@ const resyncHistory = async (req, res) => {
       });
     }
 
+    // Check if session exists in memory, if not try to restore it first
+    const whatsappSessions = whatsappService.sessions;
+    if (!whatsappSessions.has(session.session_id)) {
+      logger.info(`[resyncHistory] Session not in memory, restoring first: ${session.session_id}`);
+      
+      try {
+        // Try to restore session to memory
+        await whatsappService.createSession(session.session_id, session);
+        
+        // Wait for connection
+        await new Promise(resolve => setTimeout(resolve, 5000));
+        
+        // Check if now in memory
+        if (!whatsappSessions.has(session.session_id)) {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to restore session to memory. Please reconnect session first.',
+            data: {
+              sessionId: session.session_id,
+              hint: 'Try using POST /api/v1/sessions/:id/reconnect first'
+            }
+          });
+        }
+      } catch (restoreError) {
+        logger.error(`[resyncHistory] Failed to restore session:`, restoreError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to restore session',
+          error: restoreError.message
+        });
+      }
+    }
+
     const result = await whatsappService.resyncHistory(session.session_id);
 
     res.json({
@@ -658,34 +691,7 @@ const getSyncStatus = async (req, res) => {
 
     const stats = messageStats || {};
     
-    res.json({
-      success: true,
-      data: {
-        sessionId: session.session_id,
-        status: session.status,
-        lastConnected: session.last_connected_at,
-        sync: {
-          totalMessages: parseInt(stats.total_messages) || 0,
-          outgoingMessages: parseInt(stats.outgoing_messages) || 0,
-          incomingMessages: parseInt(stats.incoming_messages) || 0,
-          messagesWithContent: parseInt(stats.messages_with_content) || 0,
-          messagesWithoutContent: parseInt(stats.messages_without_content) || 0,
-          historyMessages: parseInt(stats.history_messages) || 0,
-          uniqueChats: parseInt(stats.unique_chats) || 0,
-          persistentChats: chatCount,
-          contentPercentage: stats.total_messages > 0 
-            ? Math.round((stats.messages_with_content / stats.total_messages) * 100) 
-            : 0,
-          dateRange: {
-            oldest: stats.oldest_message ? new Date(parseInt(stats.oldest_message)).toISOString() : null,
-            newest: stats.newest_message ? new Date(parseInt(stats.newest_message)).toISOString() : null
-          }
-        },
-        recommendations: []
-      }
-    });
-
-    // Add recommendations based on stats
+    // Build recommendations based on stats
     const recommendations = [];
     if (stats.messages_without_content > 0 && (stats.messages_without_content / stats.total_messages) > 0.1) {
       recommendations.push({
@@ -700,6 +706,7 @@ const getSyncStatus = async (req, res) => {
       });
     }
 
+    // Single response with recommendations
     res.json({
       success: true,
       data: {
