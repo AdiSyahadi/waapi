@@ -1,6 +1,7 @@
 const db = require('../models');
 const whatsappService = require('../services/whatsappService');
 const { checkSubscriptionLimit } = require('../middleware/permissions');
+const { logger } = require('../config/logger');
 const path = require('path');
 
 /**
